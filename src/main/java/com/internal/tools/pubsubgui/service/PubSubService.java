@@ -45,7 +45,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -352,9 +354,12 @@ public class PubSubService {
     // ------------------------------------------------------------- Live tail
 
     /**
-     * Stream messages published to a topic in real time. A short-lived
-     * subscription is created for the duration of the stream and deleted when
-     * the client disconnects, so existing consumers are never affected.
+     * Topic-level live tail via a dedicated <strong>temporary subscription</strong>.
+     * Pub/Sub fans out a copy of every published message to each subscription,
+     * so this sees <em>all</em> messages on the topic in real time — even when
+     * other subscriptions are actively drained by their consumers (e.g. a
+     * Dataflow job) — without competing with them. The subscription is created
+     * on start and deleted when the client disconnects.
      */
     public Flux<MessageView> tailTopic(String projectId, String topicId) {
         requireAllowed(topicId);
@@ -377,8 +382,8 @@ public class PubSubService {
             }
 
             MessageReceiver receiver = (PubsubMessage message, AckReplyConsumer consumer) -> {
-                sink.next(toMessageView(message));
-                consumer.ack();
+                sink.next(toMessageView(message, tailId));
+                consumer.ack(); // isolated temp subscription: safe to ack
             };
             Subscriber subscriber = clients.buildSubscriber(
                     ProjectSubscriptionName.of(project, tailId), receiver);
@@ -395,7 +400,7 @@ public class PubSubService {
                 }
                 try {
                     clients.subscriptionAdminClient().deleteSubscription(subName);
-                    log.info("Live tail on '{}' stopped; deleted {}", topicId, tailId);
+                    log.info("Topic live tail on '{}' stopped; deleted temp subscription {}", topicId, tailId);
                 } catch (Exception e) {
                     log.warn("Failed to delete tail subscription {}: {}", subName, e.getMessage());
                 }
@@ -412,7 +417,67 @@ public class PubSubService {
 
             try {
                 subscriber.startAsync().awaitRunning();
-                log.info("Live tail started on topic '{}' via {}", topicId, tailId);
+                log.info("Topic live tail (temp subscription) started on '{}' via {}", topicId, tailId);
+            } catch (Exception e) {
+                cleanup.run();
+                sink.error(e);
+            }
+        }, FluxSink.OverflowStrategy.BUFFER)
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /**
+     * Stream messages flowing through a single <em>existing</em> subscription in
+     * real time <strong>without acknowledging</strong> them. Every received
+     * message is immediately released (nack), so the real consumer still
+     * receives it — this tool only "peeks" the flow. No temporary subscription
+     * is ever created. Messages are de-duplicated by id so each is shown once
+     * even if it is redelivered.
+     */
+    public Flux<MessageView> tailSubscription(String projectId, String subscriptionId) {
+        String project = clients.resolveProjectId(projectId);
+        ProjectSubscriptionName sub = ProjectSubscriptionName.of(project, subscriptionId);
+
+        return Flux.<MessageView>create(sink -> {
+            Set<String> seen = ConcurrentHashMap.newKeySet();
+            AtomicBoolean cleaned = new AtomicBoolean(false);
+
+            MessageReceiver receiver = (PubsubMessage message, AckReplyConsumer consumer) -> {
+                // Release immediately so the real consumer still receives it.
+                consumer.nack();
+                String id = message.getMessageId();
+                if (id != null && !id.isEmpty() && !seen.add(id)) {
+                    return; // already shown (redelivery)
+                }
+                sink.next(toMessageView(message, subscriptionId));
+            };
+
+            Subscriber subscriber = clients.buildSubscriber(sub, receiver);
+
+            Runnable cleanup = () -> {
+                if (!cleaned.compareAndSet(false, true)) {
+                    return;
+                }
+                try {
+                    subscriber.stopAsync();
+                } catch (Exception ignored) {
+                    // best effort
+                }
+                log.info("Live tail on subscription '{}' stopped", subscriptionId);
+            };
+
+            subscriber.addListener(new ApiService.Listener() {
+                @Override
+                public void failed(ApiService.State from, Throwable failure) {
+                    sink.error(failure);
+                }
+            }, MoreExecutors.directExecutor());
+
+            sink.onDispose(cleanup::run);
+
+            try {
+                subscriber.startAsync().awaitRunning();
+                log.info("Live tail started on subscription '{}' (no-ack peek)", subscriptionId);
             } catch (Exception e) {
                 cleanup.run();
                 sink.error(e);
@@ -456,10 +521,11 @@ public class PubSubService {
                 m.getAttributesMap(),
                 m.getOrderingKey(),
                 formatPublishTime(m),
-                rm.getDeliveryAttempt());
+                rm.getDeliveryAttempt(),
+                "");
     }
 
-    private MessageView toMessageView(PubsubMessage m) {
+    private MessageView toMessageView(PubsubMessage m, String source) {
         return new MessageView(
                 m.getMessageId(),
                 "",
@@ -467,7 +533,8 @@ public class PubSubService {
                 m.getAttributesMap(),
                 m.getOrderingKey(),
                 formatPublishTime(m),
-                0);
+                0,
+                source);
     }
 
     private String formatPublishTime(PubsubMessage m) {

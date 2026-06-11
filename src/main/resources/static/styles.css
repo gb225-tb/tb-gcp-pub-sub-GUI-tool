@@ -392,6 +392,12 @@ input:focus, textarea:focus, select:focus {
 .tail-section .meta-card { background: #1e222d; border-color: #2a2f3a; }
 .tail-section .attr-tag { background: #1e222d; border-color: #2a2f3a; color: #e6e9f0; }
 .tail-section .field label, .tail-section label.hint { color: #9aa3b2; }
+.tail-section .section-head h3 .mono { font-size: 13px; }
+.tail-list { max-height: 360px; overflow-y: auto; }
+
+.tails-header { display: flex; align-items: baseline; gap: 12px; margin: 24px 0 10px; flex-wrap: wrap; }
+.tails-header h3 { margin: 0; font-size: 15px; }
+#topicTails .tail-section { margin-bottom: 12px; }
 
 /* --------------------------------------------------------- Auth gate */
 .auth-gate {

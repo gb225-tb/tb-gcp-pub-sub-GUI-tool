@@ -8,7 +8,7 @@ const state = {
   activeGroup: null,
   subById: {}, // cache of SubscriptionInfo seen via topic detail
   selected: null, // { type: 'topic'|'sub', id }
-  activeTail: null,
+  tails: new Set(), // active EventSource connections (one per subscription tail)
   busyCount: 0,
 };
 
@@ -28,11 +28,11 @@ const el = (tag, props = {}, children = []) => {
   return node;
 };
 
-function closeTail() {
-  if (state.activeTail) {
-    state.activeTail.close();
-    state.activeTail = null;
-  }
+function closeTails() {
+  state.tails.forEach((es) => {
+    try { es.close(); } catch { /* ignore */ }
+  });
+  state.tails.clear();
 }
 
 // Resolve an API path against the app's context path (works at "/" or "/catalog-pubsub-gui").
@@ -152,7 +152,7 @@ async function loadConfig() {
 }
 
 async function loadAll() {
-  closeTail();
+  closeTails();
   state.project = $("#projectInput").value.trim();
   $("#statusProject").textContent = state.project ? `project: ${state.project}` : "";
 
@@ -211,7 +211,7 @@ function renderTopicSelect() {
 
 function selectItem(type, id) {
   if (isBusy()) return;
-  closeTail();
+  closeTails();
   state.selected = { type, id };
   if (type === "topic") {
     renderTopicSelect();
@@ -285,7 +285,23 @@ async function renderTopicDetail(topicId) {
   content.appendChild(subsSection);
 
   content.appendChild(buildPublishSection(topicId));
-  content.appendChild(buildTailSection(topicId));
+
+  content.appendChild(el("div", { class: "tails-header" }, [
+    el("h3", {}, "Live tail — whole topic"),
+    el("span", { class: "hint" }, "Creates a temporary subscription (auto-deleted on stop). Sees every published message even when other subscriptions are actively consumed (e.g. by Dataflow)."),
+  ]));
+  content.appendChild(buildTailSection({
+    path: `api/topics/${encodeURIComponent(topicId)}/tail`,
+    name: topicId,
+    title: "Live tail (new subscription)",
+    hint: "A dedicated temporary subscription receives its own copy of every message published to this topic, so nothing is taken from real consumers.",
+  }));
+
+  content.appendChild(el("div", { class: "tails-header" }, [
+    el("h3", {}, "Live tail — per existing subscription"),
+    el("span", { class: "hint" }, "Observes each existing subscription without ACK (messages released). Note: a subscription actively drained by its consumer may show little or nothing here — use the whole-topic tail above instead."),
+  ]));
+  content.appendChild(el("div", { id: "topicTails" }, loadingNode("Loading subscriptions…")));
 
   try {
     const counts = await api(`/api/topics/${encodeURIComponent(topicId)}/counts`);
@@ -301,19 +317,32 @@ async function renderTopicDetail(topicId) {
 
 async function renderTopicSubsTable(topicId, counts) {
   const body = $("#topicSubsBody");
+  const tailsWrap = $("#topicTails");
   body.innerHTML = "";
   let subs;
   try {
     subs = await api(`/api/topics/${encodeURIComponent(topicId)}/subscriptions`);
   } catch (e) {
     body.appendChild(el("div", { class: "hint" }, "Error: " + e.message));
+    if (tailsWrap) { tailsWrap.innerHTML = ""; tailsWrap.appendChild(el("div", { class: "hint" }, "Error: " + e.message)); }
     return;
   }
   if (subs.length === 0) {
     body.appendChild(el("div", { class: "hint" }, "No subscriptions on this topic — there are no messages to view or count."));
+    if (tailsWrap) { tailsWrap.innerHTML = ""; tailsWrap.appendChild(el("div", { class: "hint" }, "No subscriptions to tail on this topic.")); }
     return;
   }
   subs.forEach((s) => (state.subById[s.id] = s));
+
+  if (tailsWrap) {
+    tailsWrap.innerHTML = "";
+    subs.forEach((s) => tailsWrap.appendChild(buildTailSection({
+      path: `api/subscriptions/${encodeURIComponent(s.id)}/tail`,
+      name: s.id,
+      mono: s.id,
+      compact: true,
+    })));
+  }
 
   const countById = {};
   if (counts && counts.subscriptions) counts.subscriptions.forEach((c) => (countById[c.subscriptionId] = c));
@@ -405,6 +434,13 @@ async function renderSubDetail(subId) {
       msgContainer,
     ]),
   ]));
+
+  content.appendChild(buildTailSection({
+    path: `api/subscriptions/${encodeURIComponent(subId)}/tail`,
+    name: subId,
+    title: "Live tail",
+    hint: "Observes this subscription in real time and releases every message (no ACK). If a consumer (e.g. Dataflow) is actively draining it, messages may not appear here — tail the whole topic from the topic view instead.",
+  }));
 
   try {
     const c = await api(`/api/subscriptions/${encodeURIComponent(subId)}/counts`);
@@ -511,18 +547,26 @@ function buildPublishSection(topicId) {
 }
 
 // --------------------------------------------------------------- Live tail
-function buildTailSection(topicId) {
+// Generic live-tail panel. opts:
+//   path    - SSE API path (e.g. "api/subscriptions/<id>/tail")
+//   name    - label used in toasts
+//   title   - heading text (string); or set `mono` to show a monospace name
+//   mono    - monospace heading text (for compact per-subscription panels)
+//   hint    - body hint text (null to omit)
+//   compact - smaller heading, no body hint
+function buildTailSection(opts) {
   const liveDot = el("span", { class: "live-dot hidden" });
   const statusText = el("span", { class: "hint" }, "Not listening.");
   const countBadge = el("span", { class: "pill" }, "0");
-  const list = el("div", { id: "tailList" }, el("div", { class: "hint" }, "Start the live tail to stream messages as they are published."));
+  const list = el("div", { class: "tail-list" }, el("div", { class: "hint" }, "Start the live tail to stream messages in real time."));
   let received = 0;
+  let es = null;
 
-  const startBtn = el("button", { class: "btn btn-sm btn-success" }, "▶ Start live tail");
+  const startBtn = el("button", { class: "btn btn-sm btn-success" }, "▶ Start");
   const stopBtn = el("button", { class: "btn btn-sm", disabled: "true" }, "■ Stop");
 
   const stop = () => {
-    closeTail();
+    if (es) { try { es.close(); } catch { /* ignore */ } state.tails.delete(es); es = null; }
     liveDot.classList.add("hidden");
     statusText.textContent = "Stopped.";
     startBtn.disabled = false;
@@ -530,24 +574,25 @@ function buildTailSection(topicId) {
   };
 
   const start = () => {
-    closeTail();
+    stop();
     received = 0;
     countBadge.textContent = "0";
     list.innerHTML = "";
-    list.appendChild(el("div", { class: "hint" }, "Listening for new messages…"));
+    list.appendChild(el("div", { class: "hint" }, "Listening for messages…"));
 
-    const url = apiUrl(`api/topics/${encodeURIComponent(topicId)}/tail`);
+    const url = apiUrl(opts.path);
     if (state.project) url.searchParams.set("project", state.project);
 
-    const es = new EventSource(url);
-    state.activeTail = es;
+    es = new EventSource(url);
+    state.tails.add(es);
+    const myEs = es;
     statusText.textContent = "Connecting…";
     startBtn.disabled = true;
     stopBtn.disabled = false;
 
     es.onopen = () => {
       liveDot.classList.remove("hidden");
-      statusText.textContent = "Live — streaming new messages.";
+      statusText.textContent = "Live — streaming messages.";
     };
     es.onmessage = (e) => {
       if (!e.data) return;
@@ -562,8 +607,8 @@ function buildTailSection(topicId) {
       while (list.children.length > 200) list.removeChild(list.lastChild);
     };
     es.onerror = () => {
-      if (state.activeTail === es) {
-        toast("Live tail disconnected", "error");
+      if (es === myEs) {
+        toast(`Live tail disconnected${opts.name ? " (" + opts.name + ")" : ""}`, "error");
         stop();
       }
     };
@@ -572,19 +617,23 @@ function buildTailSection(topicId) {
   startBtn.addEventListener("click", start);
   stopBtn.addEventListener("click", stop);
 
+  const heading = opts.mono
+    ? el("h3", { style: "font-size:13px" }, [el("span", { class: "mono" }, opts.mono)])
+    : el("h3", {}, opts.title || "Live tail");
+
   return el("div", { class: "section tail-section" }, [
     el("div", { class: "section-head" }, [
-      el("div", { style: "display:flex;align-items:center;gap:10px" }, [
-        el("h3", {}, "Live tail"), liveDot, statusText,
+      el("div", { style: "display:flex;align-items:center;gap:10px;min-width:0" }, [
+        heading, liveDot, statusText,
       ]),
       el("div", { style: "display:flex;align-items:center;gap:10px" }, [
         el("span", { class: "hint" }, "received"), countBadge, startBtn, stopBtn,
       ]),
     ]),
     el("div", { class: "section-body" }, [
-      el("div", { class: "hint", style: "margin-bottom:10px" }, "Streams new messages in real time via a temporary subscription (auto-deleted on stop). Does not affect existing subscriptions."),
+      (opts.compact || !opts.hint) ? null : el("div", { class: "hint", style: "margin-bottom:10px" }, opts.hint),
       list,
-    ]),
+    ].filter(Boolean)),
   ]);
 }
 
@@ -597,6 +646,7 @@ function messageCard(m) {
       metaCard("Publish time", m.publishTime || "—"),
       metaCard("Delivery attempt", String(m.deliveryAttempt || 0)),
       m.orderingKey ? metaCard("Ordering key", m.orderingKey) : null,
+      m.source ? metaCard("Observed on", m.source) : null,
     ].filter(Boolean)),
     attrEntries.length ? el("div", { style: "margin-top:12px" }, [
       el("label", { class: "hint" }, "Attributes"),

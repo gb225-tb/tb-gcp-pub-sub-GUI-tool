@@ -75,8 +75,9 @@ public class TopicController {
     }
 
     /**
-     * Live tail: stream messages published to the topic in real time using
-     * Server-Sent Events. A heartbeat comment keeps idle connections open.
+     * Topic-level live tail via a temporary subscription (auto-deleted on stop).
+     * Sees every published message even when other subscriptions are actively
+     * consumed. A heartbeat comment keeps idle connections open.
      */
     @GetMapping(value = "/{topicId}/tail", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<MessageView>> tail(@RequestParam(required = false) String project,

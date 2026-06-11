@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.reactive.resource.NoResourceFoundException;
 
 import java.util.Map;
 
@@ -36,6 +37,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TopicNotAllowedException.class)
     public ResponseEntity<Map<String, String>> notAllowed(TopicNotAllowedException e) {
         return error(HttpStatus.FORBIDDEN, e.getMessage());
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, String>> noRoute(NoResourceFoundException e) {
+        return error(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
     @ExceptionHandler(IllegalStateException.class)

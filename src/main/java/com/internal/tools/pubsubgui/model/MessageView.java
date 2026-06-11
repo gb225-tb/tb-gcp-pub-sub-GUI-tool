@@ -10,5 +10,6 @@ public record MessageView(
         Map<String, String> attributes,
         String orderingKey,
         String publishTime,
-        int deliveryAttempt) {
+        int deliveryAttempt,
+        String source) {
 }

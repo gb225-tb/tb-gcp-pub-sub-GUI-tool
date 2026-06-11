@@ -19,8 +19,17 @@ feel.
   then immediately released, never acknowledged).
 - **Publish** — send a test message (data + attributes + optional ordering key,
   with an optional burst count) to a topic, then watch it arrive in the live tail.
-- **Live tail** — stream messages **in real time** (Spring WebFlux + SSE) via a
-  temporary subscription that is auto-deleted, so consumers are unaffected.
+- **Live tail** (Spring WebFlux + SSE), in two modes:
+  - **Whole topic (new subscription)** — creates a dedicated **temporary
+    subscription** (auto-deleted on stop) that receives its own copy of every
+    published message. This is the reliable way to see traffic even when other
+    subscriptions are actively drained by a consumer (e.g. **Dataflow**), with
+    no impact on them.
+  - **Per existing subscription** — observes a real subscription **without
+    acking** (messages released/nacked, de-duplicated by id). Useful for idle
+    subscriptions or backlog, but a subscription that is actively consumed will
+    show little or nothing here (its consumer wins the messages) — use the
+    whole-topic tail instead.
 - **Purge** (destructive, explicit) — drains a subscription (or every
   subscription on a topic) by acking until the backlog is empty, coordinated
   with a `CountDownLatch`.
@@ -45,9 +54,9 @@ from one jar.
 - Java 17+, Maven 3.9+
 - Authenticated [gcloud CLI](https://cloud.google.com/sdk) (Application Default Credentials)
 - IAM on the running identity:
-  - `roles/pubsub.viewer` (list/peek), `roles/pubsub.subscriber` (peek/tail/purge)
+  - `roles/pubsub.viewer` (list), `roles/pubsub.subscriber` (peek / per-sub tail / purge)
   - `roles/pubsub.publisher` if you use the **Publish** action
-  - `roles/pubsub.editor` if you use live tail / purge (creates+deletes the temp tail subscription / acks messages)
+  - `roles/pubsub.editor` for the **whole-topic tail** (creates + deletes the temporary subscription)
   - `roles/monitoring.viewer` for the counts
 
 ## Build & run
@@ -137,12 +146,13 @@ accept an optional `?project=` query parameter.
 | `GET    /api/topics/{id}/subscriptions`         | Subscriptions on a topic                 |
 | `GET    /api/topics/{id}/counts`                | Aggregated Total/ACK/Non-ACK for a topic |
 | `POST   /api/topics/{id}/publish`               | Publish a message (data/attributes/key)  |
-| `GET    /api/topics/{id}/tail`                  | **Live tail** (SSE stream)               |
+| `GET    /api/topics/{id}/tail`                  | **Whole-topic live tail** via a temp subscription (SSE) |
 | `POST   /api/topics/{id}/purge`                 | Purge every subscription on the topic    |
 | `GET    /api/subscriptions`                     | All allowed subscriptions                |
 | `GET    /api/subscriptions/{id}/counts`         | Counts for one subscription              |
 | `POST   /api/subscriptions/{id}/peek?max=`      | Peek messages (non-destructive)          |
 | `POST   /api/subscriptions/{id}/latest`         | Peek the single latest message           |
+| `GET    /api/subscriptions/{id}/tail`           | **Live tail** for one subscription (SSE) |
 | `POST   /api/subscriptions/{id}/purge`          | Drain/purge the subscription             |
 
 ## Notes
