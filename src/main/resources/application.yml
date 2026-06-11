@@ -1,0 +1,66 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: catalog-pubsub-gui
+  webflux:
+    # Serve the whole tool under a context path, e.g. http://localhost:8080/catalog-pubsub-gui
+    base-path: ${APP_CONTEXT_PATH:/catalog-pubsub-gui}
+
+pubsub:
+  # Allow the tool to launch `gcloud auth application-default login` from the
+  # in-app "Sign in" button. Only meaningful when the tool runs locally on the
+  # same machine as the user's browser & gcloud SDK. Disable for shared deploys.
+  allow-gcloud-login: ${PUBSUB_ALLOW_GCLOUD_LOGIN:true}
+
+  # Default GCP project. Can be overridden per-request from the UI.
+  # Falls back to GOOGLE_CLOUD_PROJECT / gcloud default if left blank.
+  project-id: ${PUBSUB_PROJECT_ID:np-ecom-1-08ba}
+
+  # Emulator host (e.g. localhost:8085). When set, the tool talks to the
+  # local Pub/Sub emulator with no credentials instead of real GCP.
+  # Honors the standard PUBSUB_EMULATOR_HOST env var automatically.
+  emulator-host: ${PUBSUB_EMULATOR_HOST:}
+
+  # Extra allowed topics in addition to the grouped topics below. Topics in any
+  # group are implicitly allowed. Comma-separated via PUBSUB_ALLOWED_TOPICS.
+  allowed-topics: ${PUBSUB_ALLOWED_TOPICS:}
+
+  # Flow groups shown as tabs in the UI; each has a dropdown of its topics.
+  topic-groups:
+    - name: Inbound
+      topics:
+        - np-ecom-1-catalog_inbound_bazaarvoice-topic
+        - np-ecom-1-catalog_inbound_cf_retail-topic
+        - np-ecom-1-catalog_inbound_universe_item-topic
+        - np-ecom-1-catalog_inbound_universe_price-topic
+        - np-ecom-1-catalog_inbound_category_publish-topic
+        - np-ecom-1-catalog_inbound_hcl_categories-topic
+        - np-ecom-1-catalog_inbound_hcl_product_category_associations-topic
+        - np-ecom-1-catalog_inbound_hcl_promo_messages-topic
+        - np-ecom-1-catalog_inbound_hcl_promo_prices-topic
+        - np-ecom-1-catalog_inbound_inventory_full_load-topic
+        - np-ecom-1-catalog_inbound_inventory_delta_load-topic
+        - np-ecom-1-catalog_inbound_inventory_availability_alert-topic
+    - name: Config to Runtime
+      topics:
+        - np-ecom-1-catalog_inventory_change-topic
+        - np-ecom-1-catalog_price_change-topic
+        - np-ecom-1-catalog_product_change-topic
+        - np-ecom-1-catalog_sku_change-topic
+        - np-ecom-1-catalog_variant_change-topic
+        - np-ecom-1-catalog_category_change-topic
+        - np-ecom-1-catalog_category_product_association_change-topic
+    - name: Runtime to CT
+      topics:
+        - np-ecom-1-catalog_price_ct_ingest-topic
+        - np-ecom-1-catalog_product_ct_ingest-topic
+        - np-ecom-1-catalog_variant_ct_ingest-topic
+        - np-ecom-1-catalog_sku_ct_ingest-topic
+        - np-ecom-1-catalog_category_ct_ingest_change-topic
+        - np-ecom-1-catalog_category_product_association_ct_ingest-topic
+
+logging:
+  level:
+    com.internal.tools.pubsubgui: INFO

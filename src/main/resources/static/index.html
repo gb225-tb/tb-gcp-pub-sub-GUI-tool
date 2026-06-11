@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <!-- Resolve all relative URLs against the app's context path so the tool
+         works whether it is served at "/" or under "/catalog-pubsub-gui". -->
+    <script>document.write('<base href="' + location.origin + location.pathname.replace(/\/index\.html$/, '').replace(/\/+$/, '') + '/">');</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Catalog Pub/Sub Monitoring Tool</title>
+    <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <span class="logo">⇄</span>
+    </div>
+    <h1 class="app-title">Catalog Pub/Sub Monitoring Tool</h1>
+    <div class="topbar-controls">
+        <div class="field inline">
+            <label for="projectInput">Project</label>
+            <input id="projectInput" type="text" placeholder="gcp-project-id" autocomplete="off"/>
+        </div>
+        <span id="modeBadge" class="badge mode-real">REAL GCP</span>
+        <button id="reloadBtn" class="btn btn-ghost" title="Reload everything">⟳ Reload</button>
+    </div>
+</header>
+
+<div class="layout">
+    <aside class="sidebar">
+        <div class="sidebar-section-label">Flow</div>
+        <div id="groupTabs" class="group-tabs"></div>
+        <div class="group-picker">
+            <label for="topicSelect">Topic</label>
+            <select id="topicSelect"><option value="">Select a topic…</option></select>
+        </div>
+    </aside>
+
+    <main id="content" class="content">
+        <div class="empty-state">
+            <div class="empty-icon">⇄</div>
+            <h2>Select a topic to monitor</h2>
+            <p>Pick a topic on the left to see its subscriptions, message counts, and latest messages.</p>
+        </div>
+    </main>
+</div>
+
+<footer id="statusbar" class="statusbar">
+    <span class="status-left">
+        <span id="statusDot" class="status-dot idle"></span>
+        <span id="statusText">Ready.</span>
+    </span>
+    <span class="status-right">
+        <span id="statusProject"></span>
+        <span id="statusMode"></span>
+    </span>
+</footer>
+
+<div id="toasts" class="toasts"></div>
+
+<!-- Modal -->
+<div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Title</h3>
+            <button id="modalClose" class="icon-btn">✕</button>
+        </div>
+        <div id="modalBody" class="modal-body"></div>
+        <div id="modalFooter" class="modal-footer"></div>
+    </div>
+</div>
+
+<!-- Non-dismissible busy overlay: blocks interaction while connecting/fetching -->
+<div id="busyOverlay" class="busy-overlay hidden">
+    <div class="busy-box">
+        <span class="spinner-lg"></span>
+        <div id="busyText">Working…</div>
+        <div class="busy-hint">Please wait — do not navigate away.</div>
+    </div>
+</div>
+
+<!-- Auth gate: shown until Application Default Credentials are available -->
+<div id="authGate" class="auth-gate hidden">
+    <div class="auth-card">
+        <div class="auth-logo">⇄</div>
+        <h2>Catalog Pub/Sub Monitoring Tool</h2>
+        <p id="authMsg" class="auth-msg">This tool needs Google Cloud credentials to read your Pub/Sub topics.</p>
+        <div id="authActions" class="auth-actions"></div>
+        <div class="auth-manual">
+            <span class="hint">Or sign in manually, then click “I’ve signed in”:</span>
+            <code>gcloud auth application-default login</code>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

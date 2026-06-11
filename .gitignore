@@ -1,0 +1,23 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### Build artifacts ###
+*.class
+*.log
+
+### OS ###
+.DS_Store
+
+### Credentials (never commit) ###
+*-key.json
+*-credentials.json
+service-account*.json
+.env
