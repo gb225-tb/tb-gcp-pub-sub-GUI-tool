@@ -26,6 +26,7 @@ import com.google.pubsub.v1.SubscriptionName;
 import com.google.pubsub.v1.Topic;
 import com.google.pubsub.v1.TopicName;
 import com.internal.tools.pubsubgui.config.PubSubClientFactory;
+import com.internal.tools.pubsubgui.model.BulkPublishRequest;
 import com.internal.tools.pubsubgui.model.MessageView;
 import com.internal.tools.pubsubgui.model.PublishMessageRequest;
 import com.internal.tools.pubsubgui.model.SubscriptionCounts;
@@ -234,6 +235,67 @@ public class PubSubService {
         } catch (TimeoutException e) {
             throw new IllegalStateException("Publish timed out after 30s", e);
         }
+    }
+
+    /** Max number of per-message error strings returned from a bulk publish. */
+    private static final int MAX_BULK_ERRORS = 20;
+
+    /**
+     * Publish many messages to a topic in one call. Every message is fired
+     * asynchronously (reusing the cached {@link Publisher}), then each result is
+     * resolved. Returns a summary with the number published / failed and the
+     * first few error messages, so a partial failure still reports progress.
+     */
+    public Map<String, Object> publishBulk(String projectId, String topicId, BulkPublishRequest req)
+            throws IOException {
+        requireAllowed(topicId);
+        List<String> messages = req == null || req.messages() == null ? List.of() : req.messages();
+        String project = clients.resolveProjectId(projectId);
+        Publisher publisher = clients.publisher(project, topicId);
+
+        Map<String, String> attributes = req == null ? null : req.attributes();
+        String orderingKey = req == null ? null : req.orderingKey();
+
+        List<ApiFuture<String>> futures = new ArrayList<>(messages.size());
+        for (String message : messages) {
+            PubsubMessage.Builder b = PubsubMessage.newBuilder();
+            b.setData(ByteString.copyFromUtf8(message == null ? "" : message));
+            if (attributes != null) {
+                attributes.forEach((k, v) -> {
+                    if (k != null && !k.isBlank()) {
+                        b.putAttributes(k, v == null ? "" : v);
+                    }
+                });
+            }
+            if (orderingKey != null && !orderingKey.isBlank()) {
+                b.setOrderingKey(orderingKey.trim());
+            }
+            futures.add(publisher.publish(b.build()));
+        }
+
+        int published = 0;
+        int failed = 0;
+        List<String> errors = new ArrayList<>();
+        for (int i = 0; i < futures.size(); i++) {
+            try {
+                futures.get(i).get(60, TimeUnit.SECONDS);
+                published++;
+            } catch (Exception e) {
+                failed++;
+                if (errors.size() < MAX_BULK_ERRORS) {
+                    Throwable cause = (e instanceof ExecutionException && e.getCause() != null) ? e.getCause() : e;
+                    errors.add("message #" + (i + 1) + ": " + cause.getMessage());
+                }
+            }
+        }
+
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("topicId", topicId);
+        summary.put("total", futures.size());
+        summary.put("published", published);
+        summary.put("failed", failed);
+        summary.put("errors", errors);
+        return summary;
     }
 
     // ---------------------------------------------------------- View (peek)

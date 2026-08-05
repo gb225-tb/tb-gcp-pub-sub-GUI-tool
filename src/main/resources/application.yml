@@ -52,6 +52,7 @@ pubsub:
         - np-ecom-1-catalog_variant_change-topic
         - np-ecom-1-catalog_category_change-topic
         - np-ecom-1-catalog_category_product_association_change-topic
+        - np-ecom-1-catalog_inventory_full_load_cdc-test-topic
     - name: Runtime to CT
       topics:
         - np-ecom-1-catalog_price_ct_ingest-topic
@@ -60,6 +61,68 @@ pubsub:
         - np-ecom-1-catalog_sku_ct_ingest-topic
         - np-ecom-1-catalog_category_ct_ingest_change-topic
         - np-ecom-1-catalog_category_product_association_ct_ingest-topic
+        - np-ecom-1-catalog_inventory_full_load_cdc_runtime-test-topic
+
+# MongoDB (Firestore-in-MongoDB-compatibility mode) connections used by the
+# Mongo Compare view. Each (environment, database) pair maps to one connection
+# URI; the physical database name is embedded in the URI. Credentials default to
+# the values below but can be overridden per-connection via the env vars shown.
+mongo:
+  environments:
+    - name: Dev
+      databases:
+        - name: item-config
+          uri: ${MONGO_DEV_ITEM_CONFIG:mongodb://fsctlgitemconfigadmin:CQuq1EsdRF-hhx20RQufyogx2V0gtSMGuv6VoULU49QMlxbu@54738518-6471-486e-9b8a-7a4cb25a87f8.nam7.firestore.goog:443/fs-ctlg-item-config-dvlp?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+        - name: item-runtime
+          uri: ${MONGO_DEV_ITEM_RUNTIME:mongodb://fsctlgitemruntimeadmin:i_RADSZFjkca0pmwo2vk7vTBjrqmSrj4G5PRcJp1ugtGpPaZ@fd767d09-2a05-4a57-800e-d021a6f8715a.nam7.firestore.goog:443/fs-ctlg-item-runtime-dvlp?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+        - name: inventory-config
+          uri: ${MONGO_DEV_INVENTORY_CONFIG:mongodb://fsctlginventoryconfigadmin:cP8-NUraSssisc4vjKXOBhcuxo3mUwkjVkZ_bx2qJKYFiEJi@8b04b12a-6571-4da0-98ac-bc8dcacebf6a.nam7.firestore.goog:443/fs-ctlg-inventory-config-dvlp?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+        - name: inventory-runtime
+          uri: ${MONGO_DEV_INVENTORY_RUNTIME:mongodb://fsctlginventoryruntimeadmin:pQPqMG-dh4bhDziPu-SfA5c92JDlTdfNyTj2s_Eg5PmlhB8h@02fc6b0c-d88e-478b-a12a-eb512a7e9111.nam7.firestore.goog:443/fs-ctlg-inventory-runtime-dvlp?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+    - name: QA
+      databases:
+        - name: item-config
+          uri: ${MONGO_QA_ITEM_CONFIG:mongodb://fsctlgitemconfigadmin:J2DtEc-Ru8W0Qs0Z0h5KDUbjJZoge7yU1U5lnPmGfO6FbQ-q@0411acb4-b97d-4e3b-b84a-2f02910e5919.nam7.firestore.goog:443/fs-ctlg-item-config-test?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+        - name: item-runtime
+          uri: ${MONGO_QA_ITEM_RUNTIME:mongodb://fsctlgitemruntimeadmin:t5LMsS88dW2JB93H3hVSQqcptEtIxttb6EIRu6oIx0fhuPyv@b238da0c-af39-43aa-af48-3c97adde380c.nam7.firestore.goog:443/fs-ctlg-item-runtime-test?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+        - name: inventory-config
+          uri: ${MONGO_QA_INVENTORY_CONFIG:mongodb://fsctlginventoryconfigadmin:kxKrGOmY65Z8wAPCyBCm6cMJBGH7JdxYhBRgXgjzn8SzcycL@98f0d4e6-6039-47d4-a572-3fcb089c6826.nam7.firestore.goog:443/fs-ctlg-inventory-config-test?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+        - name: inventory-runtime
+          uri: ${MONGO_QA_INVENTORY_RUNTIME:mongodb://fsctlginventoryruntimeadmin:d1OBvcpFRYJJD7Brbyd2op-v6u0uaNaUKWFcUxS2J3quB9wd@1c328019-200a-470e-b597-ba46e9d37261.nam7.firestore.goog:443/fs-ctlg-inventory-runtime-test?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+    - name: Perf
+      databases:
+        - name: item-config
+          uri: ${MONGO_PERF_ITEM_CONFIG:mongodb://fsctlgitemconfigadmin:SOyNPbOmjJym6yPAWcF8I5AUDr6oFt1jk0hE4r8YwY4uO81w@c29f011f-970f-4e7f-8297-55c16627a258.nam7.firestore.goog:443/fs-ctlg-item-config-perf?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+        - name: item-runtime
+          uri: ${MONGO_PERF_ITEM_RUNTIME:mongodb://fsctlgitemruntimeadmin:VsnBTHTRoaZoYA6DsriJJooXK3tA1wbuT82ZdeLNoxTvD9v8@2b01eb94-78d3-4c54-9332-f30c33f367b9.nam7.firestore.goog:443/fs-ctlg-item-runtime-perf?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+        - name: inventory-config
+          uri: ${MONGO_PERF_INVENTORY_CONFIG:mongodb://fsctlginventoryconfigadmin:QGlRkmxWMgQ4b0_viJ0jkmoU_YalcGD5mPECNkSfj4HRmsS1@b1539e42-b5b5-4acd-ba5c-e107a950c9a4.nam7.firestore.goog:443/fs-ctlg-inventory-config-perf?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+        - name: inventory-runtime
+          uri: ${MONGO_PERF_INVENTORY_RUNTIME:mongodb://fsctlginventoryruntimeadmin:lE04mxJsQmFrI105hAOF5tOt_i6_2k_r7YIZIttENukafu62@06a6c53b-1884-47b3-b011-71d07b1d76a7.nam7.firestore.goog:443/fs-ctlg-inventory-runtime-perf?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+
+  # Collection groups shown in the Product Clean Up view. Same across every
+  # environment (only the connection URI differs). Each group maps to a logical
+  # database (see the databases above) and lists the collections that a product
+  # is seeded into and can be purged from by productId.
+  product-cleanup:
+    - label: Config
+      database: item-config
+      collections:
+        - Product
+        - Variant
+        - SKU
+        - Price
+        - EnrichedProduct
+        - Rating
+        - ProductCategoryAssociation
+    - label: Runtime
+      database: item-runtime
+      collections:
+        - Product
+        - Variant
+        - SKU
+        - Price
+        - ProductCategoryAssociation
 
 logging:
   level:

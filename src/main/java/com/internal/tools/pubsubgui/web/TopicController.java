@@ -1,5 +1,6 @@
 package com.internal.tools.pubsubgui.web;
 
+import com.internal.tools.pubsubgui.model.BulkPublishRequest;
 import com.internal.tools.pubsubgui.model.MessageView;
 import com.internal.tools.pubsubgui.model.PublishMessageRequest;
 import com.internal.tools.pubsubgui.model.SubscriptionInfo;
@@ -62,6 +63,13 @@ public class TopicController {
             String messageId = service.publish(project, topicId, body);
             return Map.of("status", "published", "topicId", topicId, "messageId", messageId);
         });
+    }
+
+    @PostMapping("/{topicId}/publish-bulk")
+    public Mono<Map<String, Object>> publishBulk(@RequestParam(required = false) String project,
+                                                 @PathVariable String topicId,
+                                                 @RequestBody BulkPublishRequest body) {
+        return blocking(() -> service.publishBulk(project, topicId, body));
     }
 
     @PostMapping("/{topicId}/purge")

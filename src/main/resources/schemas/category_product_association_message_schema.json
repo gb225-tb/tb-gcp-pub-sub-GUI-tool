@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tailoredbrands.com/schemas/category_product_association_message/1.0",
+  "title": "CategoryProductAssociationMessage",
+  "description": "HCL inbound category–product association (ProductBean or VariantBean). Pub/Sub payload may be one object or an array of objects.",
+  "oneOf": [
+    { "$ref": "#/definitions/associationEntry" },
+    {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/associationEntry" }
+    }
+  ],
+  "definitions": {
+    "associationEntry": {
+      "oneOf": [
+        { "$ref": "#/definitions/productBeanAssociation" },
+        { "$ref": "#/definitions/variantBeanAssociation" }
+      ]
+    },
+    "productBeanAssociation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["partNumber"],
+      "properties": {
+        "partNumber": {
+          "type": ["string", "number"],
+          "description": "HCL product part number; maps to CategoryProductAssociation.productId"
+        },
+        "catEntryTypeId": {
+          "type": "string",
+          "not": { "const": "VariantBean" },
+          "description": "Entry type from HCL; ProductBean or omitted rows sync at product level"
+        },
+        "promoCatGroupIds": {
+          "type": "string",
+          "description": "Comma-separated HCL category group ids used for Category lookup"
+        },
+        "catId": {
+          "type": "string",
+          "description": "Alternate comma-separated HCL category ids"
+        }
+      }
+    },
+    "variantBeanAssociation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["partNumber", "catEntryTypeId"],
+      "properties": {
+        "partNumber": {
+          "type": ["string", "number"],
+          "description": "HCL variant part number; maps to CategoryProductAssociation.variantId"
+        },
+        "catEntryTypeId": {
+          "type": "string",
+          "const": "VariantBean",
+          "description": "Entry type from HCL; VariantBean rows sync at variant level"
+        },
+        "promoCatGroupIds": {
+          "type": "string",
+          "description": "Comma-separated HCL category group ids used for Category lookup"
+        },
+        "catId": {
+          "type": "string",
+          "description": "Alternate comma-separated HCL category ids"
+        }
+      }
+    }
+  }
+}

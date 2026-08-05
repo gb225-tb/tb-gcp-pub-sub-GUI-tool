@@ -11,12 +11,14 @@
 </head>
 <body>
 <header class="topbar">
-    <div class="brand">
-        <span class="logo">⇄</span>
+    <div class="topbar-left">
+        <div class="brand">
+            <span class="logo">⇄</span>
+        </div>
+        <h1 class="app-title">Catalog Tools</h1>
     </div>
-    <h1 class="app-title">Catalog Pub/Sub Monitoring Tool</h1>
     <div class="topbar-controls">
-        <div class="field inline">
+        <div id="projectField" class="field inline">
             <label for="projectInput">Project</label>
             <input id="projectInput" type="text" placeholder="gcp-project-id" autocomplete="off"/>
         </div>
@@ -25,7 +27,30 @@
     </div>
 </header>
 
-<div class="layout">
+<div class="app-body">
+<nav class="app-rail" aria-label="Tool navigation">
+    <button id="navPubsub" class="rail-btn active" data-view="pubsub" title="Pub/Sub monitoring">
+        <span class="rail-ico">⇄</span>
+        <span class="rail-label">Pub/Sub</span>
+    </button>
+    <button id="navMongo" class="rail-btn" data-view="mongo" title="Mongo document compare">
+        <span class="rail-ico">⧉</span>
+        <span class="rail-label">Compare</span>
+    </button>
+    <button id="navBulk" class="rail-btn" data-view="bulk" title="Bulk post messages to a topic">
+        <span class="rail-ico">⇪</span>
+        <span class="rail-label rail-label-stack">
+            <span class="rail-label-strong">Bulk-Posting</span>
+            <span class="rail-label-sub">Pub/Sub</span>
+        </span>
+    </button>
+    <button id="navCleanup" class="rail-btn" data-view="cleanup" title="Delete a product from collections">
+        <span class="rail-ico">⌦</span>
+        <span class="rail-label">Cleanup</span>
+    </button>
+</nav>
+<div class="views">
+<div id="pubsubView" class="layout">
     <aside class="sidebar">
         <div class="sidebar-section-label">Flow</div>
         <div id="groupTabs" class="group-tabs"></div>
@@ -43,6 +68,139 @@
         </div>
     </main>
 </div>
+
+<!-- Mongo Compare view: two side-by-side document panels + diff -->
+<section id="mongoView" class="mongo-view hidden">
+    <div class="mongo-toolbar">
+        <div class="mongo-toolbar-title">
+            <span class="type-chip chip-mongo">Mongo</span>
+            <span class="hint">Compare a document across environments by <code>productId</code>, spot the differences, and delete to reprocess.</span>
+        </div>
+        <div class="mongo-toolbar-actions">
+            <label class="switch" title="Hide identical lines"><input type="checkbox" id="mongoDiffOnly"/> Differences only</label>
+            <button id="mongoSwapBtn" class="btn btn-sm" title="Swap the two panels">⇄ Swap</button>
+            <button id="mongoCompareBtn" class="btn btn-sm btn-primary" title="Load both documents and diff">Compare</button>
+        </div>
+    </div>
+    <div class="mongo-summary" id="mongoSummary"></div>
+    <div class="mongo-panels">
+        <div class="mongo-panel" id="mongoPanelLeft"></div>
+        <div class="mongo-panel" id="mongoPanelRight"></div>
+    </div>
+</section>
+
+<!-- Bulk Post view: upload a CSV/TXT/JSON file and publish each record -->
+<section id="bulkView" class="bulk-view hidden">
+    <div class="bulk-head">
+        <h2 class="bulk-title"><span class="bulk-title-strong">Bulk-Posting</span> <span class="bulk-title-sub">Pub/Sub</span></h2>
+        <p class="hint">Upload a CSV, TXT or JSON file — each row / object becomes a JSON message published to the selected topic.</p>
+    </div>
+
+    <div class="bulk-config">
+        <div class="field grow">
+            <label for="bulkTopic">Topic</label>
+            <select id="bulkTopic"><option value="">Select a topic…</option></select>
+        </div>
+        <div class="field">
+            <label for="bulkSchema">Schema</label>
+            <select id="bulkSchema"><option value="">None (raw strings)</option></select>
+        </div>
+        <div class="field">
+            <label for="bulkDelimiter">Delimiter (CSV/TXT)</label>
+            <select id="bulkDelimiter">
+                <option value="auto">Auto-detect</option>
+                <option value=",">Comma ,</option>
+                <option value="tab">Tab</option>
+                <option value="|">Pipe |</option>
+                <option value=";">Semicolon ;</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="bulk-main">
+        <div class="bulk-left">
+            <div id="bulkDropzone" class="bulk-dropzone">
+                <input id="bulkFileInput" type="file" accept=".csv,.txt,.json" hidden/>
+                <div class="bulk-dropzone-inner">
+                    <div class="bulk-dropzone-ico">⇪</div>
+                    <div class="bulk-dropzone-text">Drop a file here or <span class="link">browse</span></div>
+                    <div class="hint">.csv · .txt · .json</div>
+                </div>
+            </div>
+
+            <div id="bulkFileMeta" class="bulk-filemeta hidden"></div>
+
+            <div id="bulkFilterWrap" class="bulk-filter-wrap hidden">
+                <div class="bulk-filter-head">
+                    <h3>Filter records</h3>
+                    <div class="bulk-filter-mode">
+                        <span class="hint">Match</span>
+                        <select id="bulkMatchMode">
+                            <option value="all">ALL conditions</option>
+                            <option value="any">ANY condition</option>
+                        </select>
+                    </div>
+                    <span class="spacer"></span>
+                    <span id="bulkFilterCount" class="bulk-badge"></span>
+                    <button id="bulkAddFilter" class="btn">+ Add filter</button>
+                </div>
+                <div id="bulkFilterList" class="bulk-filter-list"></div>
+            </div>
+        </div>
+
+        <div class="bulk-right">
+            <div class="bulk-preview-wrap">
+                <div class="bulk-preview-head">
+                    <h3>Preview</h3>
+                    <span id="bulkPreviewCount" class="hint"></span>
+                </div>
+                <div id="bulkPreview" class="bulk-preview">
+                    <div class="empty-state small"><p>No file loaded yet.</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bulk-actions">
+        <button id="bulkPostBtn" class="btn btn-primary" disabled>Post messages</button>
+        <button id="bulkClearBtn" class="btn" disabled>Clear</button>
+        <span class="spacer"></span>
+        <div id="bulkResults" class="bulk-results"></div>
+    </div>
+</section>
+
+<!-- Product Clean Up view: delete a productId from selected collections -->
+<section id="cleanupView" class="cleanup-view hidden">
+    <div class="cleanup-head">
+        <h2 class="cleanup-title">Product Clean Up</h2>
+        <p class="hint">Scan a productId across the config and runtime collections, then delete it from the ones you select. Deleting lets the product be re-seeded/reprocessed.</p>
+    </div>
+
+    <div class="cleanup-config">
+        <div class="field">
+            <label for="cleanupEnv">Environment</label>
+            <select id="cleanupEnv"><option value="">Environment…</option></select>
+        </div>
+        <div class="field grow">
+            <label for="cleanupProductId">productId</label>
+            <input id="cleanupProductId" type="text" placeholder="productId to scan / clean up" autocomplete="off"/>
+        </div>
+        <div class="field cleanup-scan-field">
+            <label>&nbsp;</label>
+            <button id="cleanupScanBtn" class="btn btn-primary">Scan</button>
+        </div>
+    </div>
+
+    <div id="cleanupPanels" class="cleanup-panels"></div>
+
+    <div class="cleanup-actions">
+        <button id="cleanupDeleteBtn" class="btn btn-danger" disabled>Delete selected</button>
+        <span class="spacer"></span>
+        <div id="cleanupResults" class="cleanup-results"></div>
+    </div>
+</section>
+</div><!-- /.views -->
+</div><!-- /.app-body -->
 
 <footer id="statusbar" class="statusbar">
     <span class="status-left">

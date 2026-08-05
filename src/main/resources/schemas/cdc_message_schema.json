@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CDC Message",
+  "description": "Supports both custom CDC format and native Firestore change-stream format",
+  "type": "object",
+  "oneOf": [
+    {
+      "required": ["messageId", "messageType", "collection", "operation", "documentId", "data"],
+      "properties": {
+        "messageId": { "type": "string", "minLength": 1 },
+        "messageType": { "type": "string", "const": "CDC" },
+        "collection": { "type": "string" },
+        "operation": { "type": "string", "enum": ["INSERT", "UPDATE", "DELETE"] },
+        "documentId": { "type": "string", "minLength": 1 },
+        "data": { "type": "object" },
+        "timestamp": { "type": "string" }
+      }
+    },
+    {
+      "required": ["collection", "documentId", "operationType", "fullDocument"],
+      "properties": {
+        "source": { "type": "string" },
+        "operationType": { "type": "string", "enum": ["insert", "update", "replace", "delete"] },
+        "collection": { "type": "string" },
+        "documentId": { "type": "string", "minLength": 1 },
+        "fullDocument": { "type": "object" },
+        "fullDocumentBeforeChange": { "type": ["object", "null"] },
+        "updateDescription": { "type": ["object", "null"] },
+        "ns": { "type": "object" },
+        "resumeToken": { "type": "object" },
+        "clusterTime": { "type": "object" },
+        "timestamp": { "type": "string" }
+      }
+    }
+  ]
+}

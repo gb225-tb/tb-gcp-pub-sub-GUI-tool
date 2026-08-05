@@ -42,6 +42,123 @@ feel.
 > topic (useful for testing flows), and **Purge** is destructive — both are
 > explicit, deliberate actions. Everything else is read-only monitoring.
 
+## Mongo Compare
+
+A second view (top nav: **Pub/Sub** | **Mongo Compare**) validates the data that
+lands in MongoDB (Firestore in MongoDB-compatibility mode) after messages are
+processed. It lets you fetch the *same* document across environments and see
+exactly how they differ.
+
+- **Two side-by-side panels (A / B)** — each independently picks an
+  **Environment** (Dev / QA / Perf), a **Database** (item-config, item-runtime,
+  inventory-config, inventory-runtime), a **Collection** (loaded live from the
+  DB), and a **`productId`** to fetch. So you can compare, e.g., Dev *item-config*
+  vs QA *item-config* for the same `productId`.
+- **`productId` lookup** — searches the `productId` field (seeded across the
+  related collections), matching the value as a string and, when it parses as a
+  number, as a numeric value too. **All** matching documents are fetched (a
+  single productId can map to several, e.g. multiple SKUs); when there is more
+  than one, a per-panel **Document** dropdown (labelled by `_id`) lets you choose
+  which one to view and compare.
+- **Attribute-wise diff** — both documents are rendered key-aligned with keys
+  **sorted and matched**, and each attribute is colour-coded:
+  - **Green** = present on both sides and **equal**
+  - **Red** = present on both sides but **different**
+  - **Gray** (hatched) = **only on one side** (missing on the other)
+  - A summary bar shows counts of matching / differing / one-sided attributes.
+  - **Differences only** toggle collapses the identical attributes.
+- **Swap** flips panel A and B (selections and loaded documents).
+- **Delete (destructive)** — removes the currently selected document by its
+  `_id` from one side after an explicit confirmation, so the source pipeline
+  re-seeds and **reprocesses** it. This is the only write the view performs.
+
+> **Safety:** only environment / database / collection names and document bodies
+> ever reach the browser — connection URIs and credentials stay on the server.
+> **Delete** is destructive and gated behind a confirmation dialog.
+
+## Bulk Post
+
+A third view (left rail: **Bulk-Posting / Pub/Sub**) publishes many messages to a
+topic from an uploaded file. The file is parsed in the browser, previewed, then
+sent to the selected topic in a single batch request.
+
+- **Supported files** — `.csv`, `.txt`, or `.json`.
+  - **JSON**: a single object (one message) or an **array of objects** (one
+    message per element). Each element is published as-is.
+  - **CSV / TXT**: the first line is the **header** (keys); every subsequent row
+    becomes an object keyed by those headers. The **delimiter** can be chosen
+    (comma / tab / pipe / semicolon) or **auto-detected** from the header line.
+    Quoted fields (with embedded delimiters/newlines and `""` escapes) are
+    handled.
+- **Schema (recommended)** — pick a message schema so each column is coerced to
+  the **type the Dataflow consumer expects** instead of being guessed. This is
+  the important bit: schemas such as `product_message` carry every column as a
+  raw **string** (e.g. `Division`, `ProductColorCode`, and the `*Flag` / cost
+  fields are `string` / `[string, null]`), so guessing types turns them into
+  integers and the consumer rejects the message
+  (`integer found, [string, null] expected`). With a schema selected:
+  - `string` fields stay strings (leading zeros and numeric-looking codes are
+    preserved); nullable fields with empty cells become `null`.
+  - only `number` / `integer` / `boolean` / `array` / `object` fields are
+    converted.
+  - the UI validates each record against the schema (required, nullability,
+    enum, un-coercible numbers) and shows how many **fail schema** before you
+    post; the confirm dialog lists sample failures.
+  - Schemas are loaded from `GET /api/schemas` (bundled under
+    `src/main/resources/schemas/`). Choosing **None (raw strings)** falls back to
+    the heuristic coercion below. Structural schemas (`oneOf`/nested, no flat
+    `properties`) are listed but do not drive column coercion.
+- **Value coercion** (CSV/TXT, no schema) — numbers become numbers, `true`/`false`
+  become booleans, empty cells become `null`, everything else stays a string.
+- **Filter** — build one or more conditions on the file's headers (equals,
+  contains, ranges, is empty, …) combined with match **ALL** / **ANY** to narrow
+  down which records get posted; a live count shows how many match. Each
+  condition accepts **multiple values** entered as chips (type + Enter/comma, or
+  paste a comma/newline-separated list): a record matches if the field satisfies
+  **any** of the chips (and the "not equals" / "does not contain" operators match
+  when **none** of them are found).
+- **Preview** — shows the detected format, delimiter, record count, selected
+  schema, validation status, and the first few generated JSON messages.
+- **Post** — a **confirmation dialog** summarizes the topic, schema, message
+  count (and any active filter / schema failures) before publishing every
+  generated message via `POST /api/topics/{id}/publish-bulk`; it then reports how
+  many succeeded / failed (with the first errors listed).
+
+> **Safety:** publishing is a real, deliberate write (like the single **Publish**
+> action) and only targets configured/allowed topics.
+
+## Product Clean Up
+
+A fourth view (left rail: **Cleanup**) deletes a product's documents from the
+config and runtime MongoDB collections in one environment, so it can be
+re-seeded / reprocessed.
+
+- Pick an **Environment**, enter a **productId**, and click **Scan**.
+- Two panels — **Config** (`item-config` DB) and **Runtime** (`item-runtime` DB)
+  — list their collections with a checkbox and a **match-count** badge showing
+  how many documents hold that productId. Collections with matches are
+  pre-selected; if the productId is absent everywhere, all counts are `0` and a
+  "not found in any collection" note is shown.
+- **Delete selected** (destructive, confirmed) removes every document matching
+  the productId (`deleteMany`) from each checked collection and reports the
+  **deleted count per collection**.
+
+The collection groups are defined once (they are the same across environments):
+
+```yaml
+mongo:
+  product-cleanup:
+    - label: Config
+      database: item-config
+      collections: [Product, Variant, SKU, Price, EnrichedProduct, Rating, ProductCategoryAssociation]
+    - label: Runtime
+      database: item-runtime
+      collections: [Product, Variant, SKU, Price, ProductCategoryAssociation]
+```
+
+> **Safety:** delete uses `deleteMany` by productId and is gated behind a
+> confirmation that lists exactly which environment/collections will be purged.
+
 Built with **Spring Boot + Spring WebFlux (Java 17)**, the official
 `google-cloud-pubsub` and `google-cloud-monitoring` clients. The UI is a
 dependency-free single-page app (no Node/npm build step) — the whole thing runs
@@ -113,6 +230,31 @@ credentials land on disk, **redirects you straight into the tool**.
 Topics in any group are implicitly allowed; anything outside the configured set
 is rejected with `403`.
 
+### Mongo Compare connections
+
+The Mongo Compare view is driven entirely by the `mongo.environments` block in
+`application.yml`. Each environment lists its logical databases and the MongoDB
+connection URI for each (the physical database name is embedded in the URI):
+
+```yaml
+mongo:
+  environments:
+    - name: Dev
+      databases:
+        - name: item-config
+          uri: ${MONGO_DEV_ITEM_CONFIG:mongodb://…/fs-ctlg-item-config-dvlp?…}
+        - name: item-runtime
+          uri: ${MONGO_DEV_ITEM_RUNTIME:mongodb://…}
+        # inventory-config, inventory-runtime …
+    - name: QA   # 4 databases (…-test)
+    - name: Perf # 4 databases (…-perf)
+```
+
+Each URI is an env-var placeholder (e.g. `MONGO_DEV_ITEM_CONFIG`) that defaults
+to the checked-in value, so you can override any single connection without
+editing the file. Add/remove environments or databases freely — the UI builds
+its dropdowns from this config.
+
 ### Flow groups
 
 Groups are defined in `application.yml` and pre-loaded from the team's Confluence
@@ -146,6 +288,8 @@ accept an optional `?project=` query parameter.
 | `GET    /api/topics/{id}/subscriptions`         | Subscriptions on a topic                 |
 | `GET    /api/topics/{id}/counts`                | Aggregated Total/ACK/Non-ACK for a topic |
 | `POST   /api/topics/{id}/publish`               | Publish a message (data/attributes/key)  |
+| `POST   /api/topics/{id}/publish-bulk`          | Publish many messages at once (`{ messages:[...] }`) |
+| `GET    /api/schemas`                           | Bundled message schemas flattened for the Bulk-Posting type coercion (`[{id,title,coercible,fields[...]}]`) |
 | `GET    /api/topics/{id}/tail`                  | **Whole-topic live tail** via a temp subscription (SSE) |
 | `POST   /api/topics/{id}/purge`                 | Purge every subscription on the topic    |
 | `GET    /api/subscriptions`                     | All allowed subscriptions                |
@@ -154,6 +298,12 @@ accept an optional `?project=` query parameter.
 | `POST   /api/subscriptions/{id}/latest`         | Peek the single latest message           |
 | `GET    /api/subscriptions/{id}/tail`           | **Live tail** for one subscription (SSE) |
 | `POST   /api/subscriptions/{id}/purge`          | Drain/purge the subscription             |
+| `GET    /api/mongo/config`                      | Environments (+ database names, no URIs) and `productCleanup` groups |
+| `GET    /api/mongo/collections?env=&db=`        | Collection names in an env/database      |
+| `GET    /api/mongo/document?env=&db=&collection=&productId=` | Fetch all documents for a `productId` (`{ found, count, documents:[{id,json}] }`) |
+| `DELETE /api/mongo/document?env=&db=&collection=&id=` | Delete a document by `_id` (`{ deleted }`) |
+| `GET    /api/mongo/cleanup/scan?env=&productId=` | Per-collection match counts for a `productId` (`{ groups:[{label,database,collections:[{name,count}]}], total }`) |
+| `POST   /api/mongo/cleanup/delete`              | Delete a `productId` from selected targets (body `{ env, productId, targets:[{database,collection}] }`) → `{ results:[{database,collection,deleted}], totalDeleted }` |
 
 ## Notes
 

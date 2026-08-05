@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tailoredbrands.com/schemas/product_bv_ratings/1.0",
+  "title": "ProductBazaarVoiceRatings",
+  "description": "Product level Bazaar Voice Ratings from TBUniverseProductBVRatings.csv. One JSON object per converted CSV row.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "id",
+    "ManufacturerPartNumbers",
+    "ReviewStatistics"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique identifier for Product BV Ratings"
+    },
+    "ManufacturerPartNumbers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ManufacturerPartNumber"],
+      "properties": {
+        "ManufacturerPartNumber": {
+          "type": "string",
+          "minLength": 6,
+          "pattern": "^[A-Za-z0-9_]+$",
+          "description": "Product Id"
+        }
+      }
+    },
+    "ReviewStatistics": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["AverageOverallRating", "TotalReviewCount"],
+      "properties": {
+        "AverageOverallRating": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?$",
+          "description": "Average Overall Rating"
+        },
+        "TotalReviewCount": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "TotalReviewCount"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,185 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tailoredbrands.com/schemas/enriched_product/1.0",
+  "title": "EnrichedProductMessage",
+  "description": "Creative Force inbound payload for the Enriched Product ingestion pipeline. Aligned to the Enriched Product – Data Model Mapping document.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "productId",
+    "shortDescription",
+    "longDescription"
+  ],
+  "properties": {
+    "productId": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "minLength": 1,
+      "description": "Unique product identifier. Maps to _id, variantId, and Mongo productId. Mapping rows #1, #20, #21."
+    },
+    "uvStyleCode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Z0-9_]+$",
+      "description": "Optional Creative Force style code. Not mapped to Mongo productId (productId uses inbound productId)."
+    },
+    "brand": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Brand / banner — preferred source for banner field. Mapping row #22."
+    },
+    "shortDescription": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short marketing description. Maps to productName. Mandatory. Mapping row #5."
+    },
+    "longDescription": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Full marketing description. Maps to productDescription. Mandatory. Mapping row #6."
+    },
+    "materialBreakdown": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Primary material. Maps to fabric. Mapping row #9."
+    },
+    "styleForBullet": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Comma-separated style bullets stored as a string. Mapping row #10."
+    },
+    "pattern": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Visual pattern. Maps to pattern. Mapping row #11."
+    },
+    "btFit": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Big & tall / fit copy. Maps to Mongo btFit. Optional."
+    },
+    "onlineExclusive": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "Y",
+        "N",
+        "0",
+        "1",
+        null
+      ],
+      "description": "Online-exclusive flag as Y/N string. Transformed to Boolean. Mapping row #12."
+    },
+    "defaultColor": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "Y",
+        "N",
+        "0",
+        "1",
+        null
+      ],
+      "description": "Default-colour flag as Y/N string. Transformed to Boolean. Mapping row #13."
+    },
+    "specialFeature1": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Special feature 1. Mapping row #14, #15."
+    },
+    "specialFeature2": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "specialFeature3": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "specialFeature4": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "specialFeature5": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "specialFeature6": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "specialFeature7": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "specialFeature8": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "assetNames": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Comma-separated asset filenames. Split into mainImage, altImage[], video. Mapping rows #16, #17, #18."
+    },
+    "additionalAssociation": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Cross-sell associations. null coerced to []. Mapping row #19."
+    },
+    "productAssociation": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "bullet1": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Maps to Mongo additionalBullet1."
+    },
+    "bullet2": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Maps to Mongo additionalBullet2."
+    }
+  }
+}

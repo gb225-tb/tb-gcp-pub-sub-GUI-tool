@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tailoredbrands.com/schemas/category_published_message/1.0",
+  "title": "CategoryPublishedMessage",
+  "description": "Category published event from Pub/Sub. Triggers CategoryProductAssociation sync; ConfigDB Category document is source of truth for rules and status.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Category document _id in ConfigDB Category collection"
+    }
+  }
+}

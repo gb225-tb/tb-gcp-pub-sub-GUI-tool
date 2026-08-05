@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tailoredbrands.com/schemas/variant_association_message/1.0",
+  "title": "FitVariantAssociationMessage",
+  "description": "Inbound Fit variant-association message from catalog_inbound_variantassociations.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["associations"],
+  "properties": {
+    "from_Class": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Source product id used for Product-level Fit association docs"
+    },
+    "associations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "from_ProductCode",
+          "from_Class",
+          "to_ProductCode",
+          "to_Class"
+        ],
+        "properties": {
+          "associationType": {
+            "type": "string",
+            "description": "Association type from source; processor stores type as Fit"
+          },
+          "from_ProductCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source variant id"
+          },
+          "from_Class": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source product id"
+          },
+          "from_Color": {
+            "type": "string"
+          },
+          "to_ProductCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target variant id stored on Variant-level associations"
+          },
+          "to_Class": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target product id stored on Product-level associations"
+          },
+          "to_Color": {
+            "type": "string"
+          },
+          "_DeltaStatus": {
+            "type": "string",
+            "description": "Delta patch against existing associations. DELETED removes the target; any other value (including NEW/UPDATE) adds the target if missing. Unmentioned existing targets are left untouched"
+          }
+        }
+      }
+    }
+  }
+}

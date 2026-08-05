@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tailoredbrands.com/schemas/price_message/1.0",
+  "title": "PriceMessage",
+  "description": "Price message derived from TMW_ECOM_PRICE_FULL.csv. Each message represents one CSV row with target types applied.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "PriceListName",
+    "CatentryPartNumber",
+    "PriceinUSD"
+  ],
+  "properties": {
+    "PriceListName": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Price List Name indicating List Price or Sale Price"
+    },
+    "CatentryPartNumber": {
+      "type": "string",
+      "minLength": 12,
+      "pattern": "^[A-Za-z0-9_]+$",
+      "description": "Unique SKU / item identifier from source system"
+    },
+    "PriceinUSD": {
+      "type": "number",
+      "pattern": "^\\d+\\.\\d{2}$",
+      "description": "Price in USD"
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tailoredbrands.com/schemas/enriched_rental_product_feed_record/1.0",
+  "title": "EnrichedRentalProductFeedRecord",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "productCode"
+  ],
+  "properties": {
+    "productCode": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Rental product identifier; must be a non-blank string (alphanumeric codes such as '1850K' are accepted). The transformer additionally rejects whitespace-only values."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "INACTIVE",
+        "active",
+        "inactive"
+      ],
+      "description": "Optional ACTIVE|INACTIVE."
+    },
+    "brand": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Brand or banner name for the rental product."
+    },
+    "assetNames": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Comma-separated Creative Force asset filenames; split for imagery in downstream mapping."
+    },
+    "productName": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Marketing product title."
+    },
+    "productDescription": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Full marketing description for the rental PDP."
+    },
+    "bullet1": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional marketing bullet 1."
+    },
+    "bullet2": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional marketing bullet 2."
+    },
+    "bullet3": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional marketing bullet 3."
+    }
+  }
+}
