@@ -1,0 +1,62 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+/* ---- Monospace JSON diff (Mongo Compare) ---- */
+.j-body {
+  font-family: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre;
+}
+.j-line {
+  display: block;
+  border-radius: 4px;
+}
+.j-plain {
+  color: #384250;
+}
+.j-eq {
+  color: #274b32;
+}
+.j-diff {
+  background: rgba(224, 65, 63, 0.1);
+}
+.j-missing {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(138, 147, 162, 0.09),
+    rgba(138, 147, 162, 0.09) 6px,
+    rgba(138, 147, 162, 0.16) 6px,
+    rgba(138, 147, 162, 0.16) 12px
+  );
+  color: #8a93a2;
+}
+.j-k {
+  color: #2356d8;
+}
+.j-v {
+  color: #1d2430;
+}
+.j-dash {
+  color: #b3bccb;
+}
+.j-chg {
+  background: rgba(224, 65, 63, 0.28);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+.j-eq .j-v {
+  color: #274b32;
+}
+
+/* ---- Message data / preview blocks ---- */
+.mono {
+  font-family: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.tail-scroll {
+  scrollbar-width: thin;
+}

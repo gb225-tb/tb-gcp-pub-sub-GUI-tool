@@ -38,6 +38,14 @@ public class ConfigController {
             out.put("topicGroups", clients.properties().getTopicGroups().stream()
                     .map(g -> Map.of("name", g.getName(), "topics", g.getTopics()))
                     .toList());
+            out.put("environments", clients.properties().getEnvironments().stream()
+                    .map(env -> Map.of(
+                            "name", env.getName(),
+                            "projectId", env.getProjectId(),
+                            "topicGroups", env.getTopicGroups().stream()
+                                    .map(g -> Map.of("name", g.getName(), "topics", g.getTopics()))
+                                    .toList()))
+                    .toList());
             return out;
         }).subscribeOn(Schedulers.boundedElastic());
     }

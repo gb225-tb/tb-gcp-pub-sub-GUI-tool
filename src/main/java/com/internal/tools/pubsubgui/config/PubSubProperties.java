@@ -32,6 +32,14 @@ public class PubSubProperties {
     private List<TopicGroup> topicGroups = new ArrayList<>();
 
     /**
+     * Ordered environments (Dev/QA/Perf) shown in the Pub/Sub view's environment
+     * dropdown. Selecting one switches the active GCP project and reveals its
+     * Inbound / Config / Runtime topic groups. Every topic in every environment
+     * is implicitly allowed.
+     */
+    private List<Environment> environments = new ArrayList<>();
+
+    /**
      * When true, the tool may shell out to {@code gcloud auth application-default
      * login} on behalf of the user (only sensible for a locally-run instance).
      */
@@ -59,6 +67,46 @@ public class PubSubProperties {
                     .filter(t -> t != null && !t.isBlank())
                     .map(String::trim)
                     .toList();
+        }
+    }
+
+    /** A named environment with its own GCP project and ordered topic groups. */
+    public static class Environment {
+        private String name = "";
+        private String projectId = "";
+        private List<TopicGroup> topicGroups = new ArrayList<>();
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name == null ? "" : name.trim();
+        }
+
+        public String getProjectId() {
+            return projectId;
+        }
+
+        public void setProjectId(String projectId) {
+            this.projectId = projectId == null ? "" : projectId.trim();
+        }
+
+        public List<TopicGroup> getTopicGroups() {
+            return topicGroups;
+        }
+
+        public void setTopicGroups(List<TopicGroup> topicGroups) {
+            this.topicGroups = topicGroups == null ? new ArrayList<>() : topicGroups;
+        }
+
+        /** Every topic across this environment's groups, de-duplicated and ordered. */
+        public List<String> topics() {
+            LinkedHashSet<String> all = new LinkedHashSet<>();
+            for (TopicGroup group : topicGroups) {
+                all.addAll(group.getTopics());
+            }
+            return new ArrayList<>(all);
         }
     }
 
@@ -101,11 +149,25 @@ public class PubSubProperties {
         this.topicGroups = topicGroups == null ? new ArrayList<>() : topicGroups;
     }
 
-    /** All allowed topics: the explicit allow-list plus every grouped topic, de-duplicated and ordered. */
+    public List<Environment> getEnvironments() {
+        return environments;
+    }
+
+    public void setEnvironments(List<Environment> environments) {
+        this.environments = environments == null ? new ArrayList<>() : environments;
+    }
+
+    /**
+     * All allowed topics: the explicit allow-list, every legacy grouped topic and
+     * every topic from every environment, de-duplicated and ordered.
+     */
     public List<String> allTopics() {
         LinkedHashSet<String> all = new LinkedHashSet<>(allowedTopics);
         for (TopicGroup group : topicGroups) {
             all.addAll(group.getTopics());
+        }
+        for (Environment env : environments) {
+            all.addAll(env.topics());
         }
         return new ArrayList<>(all);
     }
@@ -119,7 +181,7 @@ public class PubSubProperties {
     }
 
     public boolean isRestricted() {
-        return !allowedTopics.isEmpty() || !topicGroups.isEmpty();
+        return !allowedTopics.isEmpty() || !topicGroups.isEmpty() || !environments.isEmpty();
     }
 
     public boolean isTopicAllowed(String topicId) {

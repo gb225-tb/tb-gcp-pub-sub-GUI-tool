@@ -44,7 +44,7 @@ feel.
 
 ## Mongo Compare
 
-A second view (top nav: **Pub/Sub** | **Mongo Compare**) validates the data that
+A second view (left rail: **Compare**) validates the data that
 lands in MongoDB (Firestore in MongoDB-compatibility mode) after messages are
 processed. It lets you fetch the *same* document across environments and see
 exactly how they differ.
@@ -78,7 +78,7 @@ exactly how they differ.
 
 ## Bulk Post
 
-A third view (left rail: **Bulk-Posting / Pub/Sub**) publishes many messages to a
+A third view (left rail: **Bulk Post**) publishes many messages to a
 topic from an uploaded file. The file is parsed in the browser, previewed, then
 sent to the selected topic in a single batch request.
 
@@ -161,14 +161,22 @@ mongo:
 
 Built with **Spring Boot + Spring WebFlux (Java 17)**, the official
 `google-cloud-pubsub` and `google-cloud-monitoring` clients. The UI is a
-dependency-free single-page app (no Node/npm build step) — the whole thing runs
-from one jar.
+**React + TypeScript** single-page app using **Material UI (MUI)** for a
+Material-Design look (compact "small"/"medium" component density), built with
+**Vite** and bundled into the jar at package time — so the whole thing still
+runs from one jar. See [Frontend (React + MUI)](#frontend-react--mui) for the
+layout and dev workflow.
 
 ---
 
 ## Prerequisites
 
 - Java 17+, Maven 3.9+
+- **No local Node/npm needed to build the jar** — `mvn package` downloads a
+  pinned Node (`v22.14.0`, via the `frontend-maven-plugin`), runs `npm ci`, and
+  builds the React app automatically. The **first build needs internet** to
+  fetch Node and the npm dependencies. For *frontend development*
+  (`npm run dev`) you need a local **Node 20+** (Vite 5).
 - Authenticated [gcloud CLI](https://cloud.google.com/sdk) (Application Default Credentials)
 - IAM on the running identity:
   - `roles/pubsub.viewer` (list), `roles/pubsub.subscriber` (peek / per-sub tail / purge)
@@ -178,13 +186,82 @@ from one jar.
 
 ## Build & run
 
+**One command** builds everything (React SPA + Spring Boot) into a single
+runnable jar and then start it:
+
 ```bash
-mvn clean package
+mvn clean package                # add -DskipTests to skip tests
 java -jar target/catalog-pubsub-gui-1.0.0.jar
 ```
 
-Open <http://localhost:8080/catalog-pubsub-gui/>. The project defaults to
-`np-ecom-1-08ba` (override with the field in the UI or `PUBSUB_PROJECT_ID`).
+Then open <http://localhost:8080/catalog-pubsub-gui/>.
+
+During `package`, the `frontend-maven-plugin` installs the pinned Node, runs
+`npm ci`, and runs `npm run build`, which Vite emits into
+`src/main/resources/static/` (see `frontend/vite.config.ts`) so the SPA is
+bundled into the jar — no separate frontend deploy.
+
+**Faster backend-only loop** — if the SPA is already built (or you only changed
+Java), skip the frontend build:
+
+```bash
+mvn -Dfrontend.skip=true package
+# or run without packaging:
+mvn -Dfrontend.skip=true spring-boot:run
+```
+
+**Easiest run** — use the helper script, which frees the port, builds the jar if
+missing, then starts (see [`./run.sh`](#runsh-auto-frees-the-port) below):
+
+```bash
+./run.sh                 # port 8080
+PORT=8099 ./run.sh       # custom port
+```
+
+The project defaults to project id `np-ecom-1-08ba` (override with the field in
+the UI or the `PUBSUB_PROJECT_ID` env var) and the context path
+`/catalog-pubsub-gui` (override with `APP_CONTEXT_PATH`). For live frontend
+development with hot reload, see [Frontend (React + MUI)](#frontend-react--mui).
+
+## Frontend (React + MUI)
+
+The UI lives in [`frontend/`](frontend/) — a **Vite + React + TypeScript** app
+using **Material UI**. A left **navigation rail** switches between the four
+views (Pub/Sub, Compare, Bulk Post, Cleanup); the top **app bar** holds the
+project field (Pub/Sub & Bulk Post only), the mode badge, and a reload button.
+
+```
+frontend/
+  src/
+    api/         # typed client + response types
+    app/         # App shell, nav rail, theme providers, auth gate, shared UI (toasts/confirm/busy)
+    views/
+      pubsub/    # topics, subscriptions, publish, peek, live tail (SSE), purge
+      mongo/     # side-by-side productId compare + attribute-wise JSON diff
+      bulk/      # file upload, schema coercion, chip filters, confirm + publish-bulk
+      cleanup/   # scan + per-collection delete
+```
+
+Development (hot reload) — run the Spring app on `:8080`, then start Vite; it
+proxies `/catalog-pubsub-gui/api` (and the SSE tails) to the backend:
+
+```bash
+# terminal 1
+mvn -Dfrontend.skip=true spring-boot:run
+# terminal 2
+cd frontend && npm install && npm run dev
+# open http://localhost:5173/catalog-pubsub-gui/
+```
+
+Production build only (writes into `src/main/resources/static/`):
+
+```bash
+cd frontend && npm run build
+```
+
+The tool is served under the context path `/catalog-pubsub-gui/`, which is baked
+into Vite's `base`; change both `spring.webflux.base-path` and `base` in
+`frontend/vite.config.ts` if you re-host it elsewhere.
 
 ### `./run.sh` (auto-frees the port)
 

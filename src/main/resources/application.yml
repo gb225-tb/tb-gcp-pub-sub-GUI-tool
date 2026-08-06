@@ -27,41 +27,131 @@ pubsub:
   # group are implicitly allowed. Comma-separated via PUBSUB_ALLOWED_TOPICS.
   allowed-topics: ${PUBSUB_ALLOWED_TOPICS:}
 
-  # Flow groups shown as tabs in the UI; each has a dropdown of its topics.
-  topic-groups:
-    - name: Inbound
-      topics:
-        - np-ecom-1-catalog_inbound_bazaarvoice-topic
-        - np-ecom-1-catalog_inbound_cf_retail-topic
-        - np-ecom-1-catalog_inbound_universe_item-topic
-        - np-ecom-1-catalog_inbound_universe_price-topic
-        - np-ecom-1-catalog_inbound_category_publish-topic
-        - np-ecom-1-catalog_inbound_hcl_categories-topic
-        - np-ecom-1-catalog_inbound_hcl_product_category_associations-topic
-        - np-ecom-1-catalog_inbound_hcl_promo_messages-topic
-        - np-ecom-1-catalog_inbound_hcl_promo_prices-topic
-        - np-ecom-1-catalog_inbound_inventory_full_load-topic
-        - np-ecom-1-catalog_inbound_inventory_delta_load-topic
-        - np-ecom-1-catalog_inbound_inventory_availability_alert-topic
-    - name: Config to Runtime
-      topics:
-        - np-ecom-1-catalog_inventory_change-topic
-        - np-ecom-1-catalog_price_change-topic
-        - np-ecom-1-catalog_product_change-topic
-        - np-ecom-1-catalog_sku_change-topic
-        - np-ecom-1-catalog_variant_change-topic
-        - np-ecom-1-catalog_category_change-topic
-        - np-ecom-1-catalog_category_product_association_change-topic
-        - np-ecom-1-catalog_inventory_full_load_cdc-test-topic
-    - name: Runtime to CT
-      topics:
-        - np-ecom-1-catalog_price_ct_ingest-topic
-        - np-ecom-1-catalog_product_ct_ingest-topic
-        - np-ecom-1-catalog_variant_ct_ingest-topic
-        - np-ecom-1-catalog_sku_ct_ingest-topic
-        - np-ecom-1-catalog_category_ct_ingest_change-topic
-        - np-ecom-1-catalog_category_product_association_ct_ingest-topic
-        - np-ecom-1-catalog_inventory_full_load_cdc_runtime-test-topic
+  # Per-environment flow. The Pub/Sub view shows an Environment dropdown; picking
+  # one switches the active GCP project and reveals its Inbound / Config / Runtime
+  # topic groups. Topic names are derived from the tb-catalog-data-processor
+  # application-<env>.yml (subscription "...-subscription" -> topic "...-topic").
+  environments:
+    - name: Dev
+      project-id: np-ecom-1-08ba
+      topic-groups:
+        - name: Inbound
+          topics:
+            - np-ecom-1-catalog_inbound_universe_item-topic
+            - np-ecom-1-catalog_inbound_cf_retail-topic
+            - np-ecom-1-catalog_inbound_universe_price-topic
+            - np-ecom-1-catalog_inbound_bazaarvoice-topic
+            - np-ecom-1-catalog_inbound_hcl_promo_messages-topic
+            - np-ecom-1-catalog_inbound_category_publish-topic
+            - np-ecom-1-catalog_inbound_hcl_categories-topic
+            - np-ecom-1-catalog_inbound_hcl_product_category_associations-topic
+            - np-ecom-1-catalog_inbound_variantassociations-topic
+            - np-ecom-1-catalog_inbound_hcl_promo_prices-topic
+        - name: Config
+          topics:
+            - np-ecom-1-catalog_product_change-topic
+            - np-ecom-1-catalog_variant_change-topic
+            - np-ecom-1-catalog_sku_change-topic
+            - np-ecom-1-catalog_price_change-topic
+            - np-ecom-1-catalog_category_change-topic
+            - np-ecom-1-catalog_category_product_association_change-topic
+            - np-ecom-1-catalog_variantassociation_change-topic
+        - name: Runtime
+          topics:
+            - np-ecom-1-catalog_product_ct_ingest-topic
+            - np-ecom-1-catalog_product_ct_dlq-topic
+            - np-ecom-1-catalog_variant_ct_ingest-topic
+            - np-ecom-1-catalog_variant_ct_dlq-topic
+            - np-ecom-1-catalog_sku_ct_ingest-topic
+            - np-ecom-1-catalog_sku_ct_dlq-topic
+            - np-ecom-1-catalog_price_ct_ingest-topic
+            - np-ecom-1-catalog_price_ct_dlq-topic
+            - np-ecom-1-catalog_category_ct_ingest-topic
+            - np-ecom-1-catalog_category_ct_dlq-topic
+            - np-ecom-1-catalog_category_hcl_ingest-topic
+            - np-ecom-1-catalog_category_product_association_ct_ingest-topic
+            - np-ecom-1-catalog_category_product_association_ct_dlq-topic
+            - np-ecom-1-catalog_category_product_association_hcl_ingest-topic
+    - name: QA
+      project-id: np-ecom-1-08ba
+      topic-groups:
+        - name: Inbound
+          topics:
+            - np-ecom-1-qa_catalog_inbound_universe_item-topic
+            - np-ecom-1-qa_catalog_inbound_cf_retail-topic
+            - np-ecom-1-qa_catalog_inbound_universe_price-topic
+            - np-ecom-1-qa_catalog_inbound_bazaarvoice-topic
+            - np-ecom-1-qa_catalog_inbound_hcl_promo_messages-topic
+            - np-ecom-1-qa_catalog_inbound_category_publish-topic
+            - np-ecom-1-qa_catalog_inbound_hcl_categories-topic
+            - np-ecom-1-qa_catalog_inbound_hcl_product_category_associations-topic
+            - np-ecom-1-qa_catalog_inbound_variantassociations-topic
+            - np-ecom-1-qa_catalog_inbound_hcl_promo_prices-topic
+        - name: Config
+          topics:
+            - np-ecom-1-qa_catalog_product_change-topic
+            - np-ecom-1-qa_catalog_variant_change-topic
+            - np-ecom-1-qa_catalog_sku_change-topic
+            - np-ecom-1-qa_catalog_price_change-topic
+            - np-ecom-1-qa_catalog_category_change-topic
+            - np-ecom-1-qa_catalog_category_product_association_change-topic
+            - np-ecom-1-qa_catalog_variantassociation_change-topic
+        - name: Runtime
+          topics:
+            - np-ecom-1-qa_catalog_product_ct_ingest-topic
+            - np-ecom-1-qa_catalog_product_ct_dlq-topic
+            - np-ecom-1-qa_catalog_variant_ct_ingest-topic
+            - np-ecom-1-qa_catalog_variant_ct_dlq-topic
+            - np-ecom-1-qa_catalog_sku_ct_ingest-topic
+            - np-ecom-1-qa_catalog_sku_ct_dlq-topic
+            - np-ecom-1-qa_catalog_price_ct_ingest-topic
+            - np-ecom-1-qa_catalog_price_ct_dlq-topic
+            - np-ecom-1-qa_catalog_category_ct_ingest-topic
+            - np-ecom-1-qa_catalog_category_ct_dlq-topic
+            - np-ecom-1-qa_catalog_category_hcl_ingest-topic
+            - np-ecom-1-qa_catalog_category_product_association_ct_ingest-topic
+            - np-ecom-1-qa_catalog_category_product_association_ct_dlq-topic
+            - np-ecom-1-qa_catalog_category_product_association_hcl_ingest-topic
+    - name: Perf
+      project-id: np-ecom-2-6d1a
+      topic-groups:
+        - name: Inbound
+          topics:
+            - np-ecom-2-catalog_inbound_universe_item-topic
+            - np-ecom-2-catalog_inbound_cf_retail-topic
+            - np-ecom-2-catalog_inbound_universe_price-topic
+            - np-ecom-2-catalog_inbound_bazaarvoice-topic
+            - np-ecom-2-catalog_inbound_hcl_promo_messages-topic
+            - np-ecom-2-catalog_inbound_hcl_categories-topic
+            - np-ecom-2-catalog_inbound_hcl_product_category_associations-topic
+            - np-ecom-2-catalog_inbound_variantassociations-topic
+            - np-ecom-2-catalog_inbound_hcl_promo_prices-topic
+            - np-ecom-2-catalog_inbound_category_publish-topic
+        - name: Config
+          topics:
+            - np-ecom-2-catalog_product_change-topic
+            - np-ecom-2-catalog_variant_change-topic
+            - np-ecom-2-catalog_sku_change-topic
+            - np-ecom-2-catalog_price_change-topic
+            - np-ecom-2-catalog_category_change-topic
+            - np-ecom-2-catalog_category_product_association_change-topic
+            - np-ecom-2-catalog_variantassociation_change-topic
+        - name: Runtime
+          topics:
+            - np-ecom-2-catalog_product_ct_ingest-topic
+            - np-ecom-2-catalog_product_ct_dlq-topic
+            - np-ecom-2-catalog_variant_ct_ingest-topic
+            - np-ecom-2-catalog_variant_ct_dlq-topic
+            - np-ecom-2-catalog_sku_ct_ingest-topic
+            - np-ecom-2-catalog_sku_ct_dlq-topic
+            - np-ecom-2-catalog_price_ct_ingest-topic
+            - np-ecom-2-catalog_price_ct_dlq-topic
+            - np-ecom-2-catalog_category_ct_ingest-topic
+            - np-ecom-2-catalog_category_ct_dlq-topic
+            - np-ecom-2-catalog_category_hcl_ingest-topic
+            - np-ecom-2-catalog_category_product_association_ct_ingest-topic
+            - np-ecom-2-catalog_category_product_association_ct_dlq-topic
+            - np-ecom-2-catalog_category_product_association_hcl_ingest-topic
 
 # MongoDB (Firestore-in-MongoDB-compatibility mode) connections used by the
 # Mongo Compare view. Each (environment, database) pair maps to one connection
