@@ -214,6 +214,48 @@ mongo:
         - Price
         - ProductCategoryAssociation
 
+# HCL Commerce DB2 source for the HCL Data Explorer (read-only; VPN required). Each environment
+# points at its own DB2 (Dev/Perf -> wctst1:50001, QA -> wctst2:50003). Credentials are overridable
+# via env vars; QA credentials are blank in the reference config and must be supplied. The tool
+# builds the 7 Config-Catalog documents the HCL migration would write and displays them — no writes.
+hcl:
+  environments:
+    - name: Dev
+      db2:
+        url: ${HCL_DEV_DB2_URL:jdbc:db2://db2tst601.gcp.tmw.com:50001/wctst1}
+        user: ${HCL_DEV_DB2_USER:sg362}
+        password: ${HCL_DEV_DB2_PASSWORD:Willow@5721}
+        current-schema: ${HCL_DEV_DB2_SCHEMA:WCS}
+    - name: QA
+      db2:
+        url: ${HCL_QA_DB2_URL:jdbc:db2://db2tst601.gcp.tmw.com:50003/wctst2}
+        user: ${HCL_QA_DB2_USER:}
+        password: ${HCL_QA_DB2_PASSWORD:}
+        current-schema: ${HCL_QA_DB2_SCHEMA:WCS}
+    - name: Perf
+      db2:
+        url: ${HCL_PERF_DB2_URL:jdbc:db2://db2tst601.gcp.tmw.com:50001/wctst1}
+        user: ${HCL_PERF_DB2_USER:sg362}
+        password: ${HCL_PERF_DB2_PASSWORD:Willow@5721}
+        current-schema: ${HCL_PERF_DB2_SCHEMA:WCS}
+  migration:
+    banner: TMW
+    audit-actor: HCLDataMigrationProcessor
+    color-code-excluded-prefixes:
+      - TMW_0042
+      - TMW_003
+      - TUX
+    list-price-type: TMWCASList
+    sale-price-type: TMWSalePrice
+  collections:
+    product: Product
+    variant: Variant
+    sku: SKU
+    price: Price
+    rating: Rating
+    enriched-product: EnrichedProduct
+    item: Item
+
 logging:
   level:
     com.internal.tools.pubsubgui: INFO

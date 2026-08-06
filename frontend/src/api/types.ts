@@ -133,6 +133,42 @@ export interface CleanupDeleteResponse {
   results: { database: string; collection: string; deleted: number }[];
 }
 
+// ---- HCL Data Explorer ----
+export interface HclStatus {
+  env: string;
+  up: boolean;
+  host: string;
+  error?: string;
+}
+
+export type HclDoc = Record<string, unknown>;
+
+export interface HclSku {
+  sku: HclDoc;
+  price: HclDoc;
+  item: HclDoc;
+}
+
+export interface HclVariant {
+  variant: HclDoc;
+  enrichedProduct: HclDoc | null;
+  enrichedPublishReady: boolean;
+  skus: HclSku[];
+}
+
+export interface HclProductResponse {
+  env: string;
+  productId: string;
+  catEntryId?: number;
+  found: boolean;
+  reason?: string;
+  product?: HclDoc;
+  rating?: HclDoc | null;
+  variants?: HclVariant[];
+  counts?: Record<string, number>;
+  collections?: Record<string, string>;
+}
+
 // ---- Schemas (Bulk Post) ----
 export interface SchemaField {
   name: string;

@@ -65,6 +65,31 @@
             <artifactId>mongodb-driver-sync</artifactId>
         </dependency>
 
+        <!-- HCL Commerce source is DB2 over JDBC (VPN-only), used by the HCL Data Explorer. -->
+        <dependency>
+            <groupId>com.ibm.db2</groupId>
+            <artifactId>jcc</artifactId>
+            <version>11.5.9.0</version>
+        </dependency>
+
+        <!-- Copied HCL model/mapper/config classes use Lombok + Commons-Lang3; the YAML
+             query/attribute files are parsed with SnakeYAML (bundled with Boot but pinned here). -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

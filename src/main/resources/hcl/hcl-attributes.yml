@@ -1,0 +1,95 @@
+# HCL attribute identifier -> Config Catalog field mappings (straight same-entity value copies).
+#
+# type: string (default) | double | integer | boolean | stringSet
+# source: desc (ATTRVALDESC.VALUE, default) | val (ATTRVAL.IDENTIFIER)
+# truthy: case-insensitive tokens that map a boolean to true (default ["1"]).
+#
+# Attributes that fan out across documents (the product-level shared attributes: fabric, pattern,
+# careInstructions, styleForBullet, features, specialFeatures, specialFeaturesPGP, bigAndTallFit,
+# rentalBullet1..3), Division (two fields), the Set accumulations (occasion, rentalFit), image URLs,
+# colorCode and associations are derived in DocumentMappers to preserve exact legacy parity.
+
+product:
+  - { hcl: "AccessoryStyle",   field: "accessoryStyle" }
+  - { hcl: "Badge",            field: "badge" }
+  - { hcl: "BestSeller",       field: "bestSeller",       type: "double" }
+  - { hcl: "BestSellerBT",     field: "bestSellerBT",     type: "double" }
+  - { hcl: "bitlyURL",         field: "bitlyURL" }
+  - { hcl: "Brand",            field: "brand" }
+  - { hcl: "CollectionName",   field: "collectionName" }
+  - { hcl: "Fit",              field: "fit" }
+  - { hcl: "GoingFast",        field: "isGoingFast",      type: "boolean", truthy: ["TRUE"] }
+  - { hcl: "Group",            field: "group" }
+  - { hcl: "isBundle",         field: "isBundle",         type: "boolean", truthy: ["1"] }
+  - { hcl: "isCreaset",        field: "isCreaset",        type: "boolean", truthy: ["1"] }
+  - { hcl: "isHazardousItem",  field: "isHazardousItem",  type: "boolean", truthy: ["1"] }
+  - { hcl: "isHem",            field: "isHem",            type: "boolean", truthy: ["1"] }
+  - { hcl: "isRental",         field: "isRental",         type: "boolean", truthy: ["1"] }
+  - { hcl: "JacketLining",     field: "jacketLining" }
+  - { hcl: "JacketStyle",      field: "jacketStyle" }
+  - { hcl: "JacketVent",       field: "jacketVent" }
+  - { hcl: "LapelStyle",       field: "lapelStyle" }
+  - { hcl: "Material",         field: "material" }
+  - { hcl: "MaxHemLength",     field: "maxHemLength",     type: "double" }
+  - { hcl: "MyRegistry",       field: "showMyRegistry",   type: "boolean", truthy: ["true"] }
+  - { hcl: "NewArrivals",      field: "isNewArrival",     type: "boolean", truthy: ["TRUE"] }
+  - { hcl: "Origin",           field: "origin" }
+  - { hcl: "PackageQty",       field: "packageQty" }
+  - { hcl: "PackageType",      field: "packageType" }
+  - { hcl: "PantFinish",       field: "pantFinish" }
+  - { hcl: "PantStyle",        field: "pantStyle" }
+  - { hcl: "PocketStyle",      field: "pocketStyle" }
+  - { hcl: "RetailPartNumber", field: "retailPartNumber" }
+  - { hcl: "SeasonCode",       field: "seasonCode" }
+  - { hcl: "ShirtCollarStyle", field: "shirtCollarStyle" }
+  - { hcl: "ShirtCuffStyle",   field: "shirtCuffStyle" }
+  - { hcl: "ShoeSoleMaterial", field: "shoeSoleMaterial" }
+  - { hcl: "ShoeStyle",        field: "shoeStyle" }
+  - { hcl: "ShoeToeStyle",     field: "shoeToeStyle" }
+  - { hcl: "SleeveLength",     field: "sleeveLength" }
+  - { hcl: "SubDivision",      field: "subDivision" }
+  - { hcl: "SuperDivision",    field: "superDivision" }
+  - { hcl: "SuperGroup",       field: "superGroup" }
+  - { hcl: "Type",             field: "type" }
+  - { hcl: "Wash",             field: "wash" }
+  - { hcl: "WebFlag",          field: "webFlag",          type: "integer" }
+  - { hcl: "Width",            field: "width" }
+
+variant:
+  - { hcl: "Color",                  field: "color" }
+  - { hcl: "ColorFamily",            field: "colorFamily" }
+  - { hcl: "PROMO_TEXT_SHORT",       field: "promoName" }
+  - { hcl: "PROMO_TEXT_LONG",        field: "promoDesc" }
+  - { hcl: "PROMO_TEXT_SHORT_BT",    field: "promoNameBt" }
+  - { hcl: "PROMO_TEXT_LONG_BT",     field: "promoDescBt" }
+  - { hcl: "PROMO_MATCHING_REG_TEXT", field: "promoMatchingItems" }
+  - { hcl: "PROMO_MATCHING_BT_TEXT", field: "promoMatchingItemsBt" }
+  - { hcl: "PROMO_TEXT_GROUPED",     field: "promoNameGrouped" }
+  - { hcl: "PROMO_PGP_DISPLAY",      field: "isPromoDisplayInPgp", type: "boolean", truthy: ["true"] }
+
+sku:
+  - { hcl: "dept",            field: "dept" }
+  - { hcl: "dollar_value",    field: "dollarValue",    type: "double" }
+  - { hcl: "gcStyle",         field: "gcStyle" }
+  - { hcl: "isBigAndTall",    field: "isBigAndTall",   type: "boolean", truthy: ["1"] }
+  - { hcl: "isClearance",     field: "isClearance",    type: "boolean", truthy: ["1"] }
+  - { hcl: "isDropShippable", field: "isDropShippable", type: "boolean", truthy: ["1"] }
+  - { hcl: "isSale",          field: "isSale",         type: "boolean", truthy: ["1"] }
+  - { hcl: "isTempMarkdown",  field: "isTempMarkdown", type: "boolean", truthy: ["1"] }
+  - { hcl: "Size",            field: "size",           type: "stringSet" }
+  - { hcl: "PrimarySize",     field: "primarySize" }
+  - { hcl: "SecondarySize",   field: "secondarySize" }
+  - { hcl: "SizeCode",        field: "sizeCode" }
+  - { hcl: "PantSize",        field: "pantSize" }
+  - { hcl: "VestSize",        field: "vestSize" }
+
+enrichedProduct:
+  - { hcl: "DEFAULT_COLOR",     field: "isDefaultColor",   type: "boolean", truthy: ["Y"] }
+  - { hcl: "StyleForBullet",    field: "styleForBullet" }
+  - { hcl: "isOnlineExclusive", field: "isOnlineExclusive", type: "boolean", truthy: ["1"] }
+
+rating:
+  - { hcl: "AverageRating",        field: "averageRating",        type: "double" }
+  - { hcl: "AverageRoundedRating", field: "averageRoundedRating", type: "double" }
+  - { hcl: "ReviewCount",          field: "reviewCount",          type: "integer" }
+  - { hcl: "RatingAndReview",      field: "ratingAndReview",      type: "double" }
