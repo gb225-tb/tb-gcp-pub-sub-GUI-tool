@@ -43,6 +43,12 @@ export const theme = createTheme({
     MuiButtonGroup: { defaultProps: { size: "small" } },
     MuiTextField: { defaultProps: { size: "small" } },
     MuiFormControl: { defaultProps: { size: "small" } },
+    MuiInputLabel: {
+      styleOverrides: {
+        // Bold field legends consistently across every screen.
+        root: { fontWeight: 600 },
+      },
+    },
     MuiSelect: { defaultProps: { size: "small" } },
     MuiInputBase: { defaultProps: { size: "small" } },
     MuiCheckbox: { defaultProps: { size: "small" } },

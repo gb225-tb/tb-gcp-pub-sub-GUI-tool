@@ -140,7 +140,7 @@ function FilterRow({
 }
 
 export function BulkView() {
-  const { groups } = useAppState();
+  const { groups, environments, activeEnv, setActiveEnv, project } = useAppState();
   const { withBusy, toast, confirm } = useUi();
 
   const [schemas, setSchemas] = useState<SchemaDescriptor[]>([]);
@@ -172,6 +172,12 @@ export function BulkView() {
       }
     })();
   }, []);
+
+  // A topic belongs to exactly one environment; clear the selection when the
+  // active environment changes so we never publish to a wrong-project topic.
+  useEffect(() => {
+    setTopic("");
+  }, [activeEnv]);
 
   // Reparse whenever the file, delimiter, or schema changes.
   useEffect(() => {
@@ -309,6 +315,32 @@ export function BulkView() {
       <Box sx={{ width: { xs: "100%", md: 420 }, flexShrink: 0, minHeight: 0, overflow: "auto", pr: 0.5 }}>
         <Stack spacing={2}>
           <Typography variant="h6">Bulk Post</Typography>
+
+          {environments.length > 0 && (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <FormControl sx={{ minWidth: 140 }}>
+                <InputLabel id="bulk-env-label">Environment</InputLabel>
+                <Select
+                  labelId="bulk-env-label"
+                  label="Environment"
+                  value={activeEnv}
+                  onChange={(e) => setActiveEnv(String(e.target.value))}
+                >
+                  {environments.map((env) => (
+                    <MenuItem key={env.name} value={env.name}>
+                      {env.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Chip
+                label={project || "no project"}
+                variant="outlined"
+                size="small"
+                sx={{ fontFamily: "monospace", maxWidth: 220 }}
+              />
+            </Stack>
+          )}
 
           <FormControl fullWidth>
             <InputLabel id="bulk-topic-label">Topic</InputLabel>
