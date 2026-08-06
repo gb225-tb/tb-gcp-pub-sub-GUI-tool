@@ -17,6 +17,7 @@ import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import StorageIcon from "@mui/icons-material/Storage";
+import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import HubIcon from "@mui/icons-material/Hub";
 
 import { useAppState } from "./AppState";
@@ -25,8 +26,9 @@ import { MongoView } from "../views/mongo/MongoView";
 import { BulkView } from "../views/bulk/BulkView";
 import { CleanupView } from "../views/cleanup/CleanupView";
 import { HclView } from "../views/hcl/HclView";
+import { CtView } from "../views/ct/CtView";
 
-export type ViewId = "pubsub" | "mongo" | "bulk" | "cleanup" | "hcl";
+export type ViewId = "pubsub" | "mongo" | "bulk" | "cleanup" | "hcl" | "ct";
 
 interface NavItem {
   id: ViewId;
@@ -42,6 +44,7 @@ const NAV: NavItem[] = [
   { id: "bulk", label: "Bulk Post", icon: <UploadFileIcon />, color: "#7b5bff" },
   { id: "cleanup", label: "Cleanup", icon: <DeleteSweepIcon />, color: "#e0413f" },
   { id: "hcl", label: "HCL", icon: <StorageIcon />, color: "#0e9aa7" },
+  { id: "ct", label: "Commerce Tool", icon: <ShoppingBagIcon />, color: "#f5871f" },
 ];
 
 const RAIL_WIDTH = 92;
@@ -198,6 +201,7 @@ export function AppShell() {
           {view === "bulk" && <BulkView />}
           {view === "cleanup" && <CleanupView />}
           {view === "hcl" && <HclView />}
+          {view === "ct" && <CtView />}
         </Box>
       </Box>
     </Box>

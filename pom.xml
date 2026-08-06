@@ -20,6 +20,8 @@
     <properties>
         <java.version>17</java.version>
         <google-cloud-bom.version>26.50.0</google-cloud-bom.version>
+        <!-- CommerceTools SDK v2 (matches tb-catalog-data-processor). -->
+        <commercetools.version>19.11.0</commercetools.version>
         <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
         <node.version>v22.14.0</node.version>
         <!-- Set -Dfrontend.skip=true to skip the React build (e.g. when the
@@ -63,6 +65,19 @@
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-sync</artifactId>
+        </dependency>
+
+        <!-- CommerceTools SDK v2 (public SaaS API), used by the CT Data Explorer. Version pinned to
+             match tb-catalog-data-processor so the client/GraphQL usage stays faithful. -->
+        <dependency>
+            <groupId>com.commercetools.sdk</groupId>
+            <artifactId>commercetools-sdk-java-api</artifactId>
+            <version>${commercetools.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.commercetools.sdk</groupId>
+            <artifactId>commercetools-http-client</artifactId>
+            <version>${commercetools.version}</version>
         </dependency>
 
         <!-- HCL Commerce source is DB2 over JDBC (VPN-only), used by the HCL Data Explorer. -->

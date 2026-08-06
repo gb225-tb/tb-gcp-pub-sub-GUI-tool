@@ -169,6 +169,76 @@ export interface HclProductResponse {
   collections?: Record<string, string>;
 }
 
+// ---- CT Data Explorer ----
+export interface CtStatus {
+  env: string;
+  connected: boolean;
+  projectKey?: string;
+  projectName?: string;
+  scope?: string;
+  error?: string;
+}
+
+export type CtDoc = Record<string, unknown>;
+
+export interface CtPrice {
+  country: string | null;
+  currency: string | null;
+  centAmount: number;
+  fractionDigits: number;
+  amount: string;
+}
+
+export interface CtCategory {
+  id: string;
+  name?: string | null;
+  key?: string | null;
+  externalId?: string | null;
+}
+
+export interface CtSku {
+  sku: string | null;
+  attributes: Record<string, unknown>;
+  categories: string[];
+  prices: CtPrice[];
+  raw: CtDoc;
+}
+
+export interface CtVariant {
+  id: string | null;
+  variantId: string | null;
+  version: number;
+  published: boolean;
+  name: string | null;
+  skus: CtSku[];
+  raw: CtDoc;
+}
+
+export interface CtProduct {
+  id: string | null;
+  key: string | null;
+  version: number;
+  published: boolean;
+  name: string | null;
+  description: string | null;
+  categories: string[];
+  images: string[];
+  attributes: Record<string, unknown>;
+  raw: CtDoc;
+}
+
+export interface CtProductResponse {
+  env: string;
+  productId: string;
+  projectKey?: string;
+  found: boolean;
+  reason?: string;
+  product?: CtProduct;
+  variants?: CtVariant[];
+  categoriesById?: Record<string, CtCategory>;
+  counts?: Record<string, number>;
+}
+
 // ---- Schemas (Bulk Post) ----
 export interface SchemaField {
   name: string;

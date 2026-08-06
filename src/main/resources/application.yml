@@ -256,6 +256,31 @@ hcl:
     enriched-product: EnrichedProduct
     item: Item
 
+# commercetools (CT) connection for the CT Data Explorer (read-only GraphQL). CT is a public SaaS
+# API (no VPN). Per environment: its own project key + OAuth client credentials. Credentials are
+# blank by default and must be supplied via env vars (secrets are never committed, matching
+# tb-catalog-data-processor). authUrl/apiUrl default to the US-central GCP CT endpoints.
+ct:
+  environments:
+    - name: Dev
+      project-key: ${CT_DEV_PROJECT_KEY:tb-us-dev}
+      client-id: ${CT_DEV_CLIENT_ID:rums-2e332gTnObYuKG5ptTb}
+      client-secret: ${CT_DEV_CLIENT_SECRET:lHbSvdZRt_jRzJpceqSNqDok79_f5avX}
+      auth-url: ${CT_DEV_AUTH_URL:https://auth.us-central1.gcp.commercetools.com}
+      api-url: ${CT_DEV_API_URL:https://api.us-central1.gcp.commercetools.com}
+    - name: QA
+      project-key: ${CT_QA_PROJECT_KEY:tb-us-qa}
+      client-id: ${CT_QA_CLIENT_ID:HXfoIJq1bEdBMGMLvsBGMt4q}
+      client-secret: ${CT_QA_CLIENT_SECRET:MJ_zRG8L7XUkgF2S9VQZSd4SRdq2FbeI}
+      auth-url: ${CT_QA_AUTH_URL:https://auth.us-central1.gcp.commercetools.com}
+      api-url: ${CT_QA_API_URL:https://api.us-central1.gcp.commercetools.com}
+    - name: Perf
+      project-key: ${CT_PERF_PROJECT_KEY:tb-us-perf}
+      client-id: ${CT_PERF_CLIENT_ID:X5qSzTS8paVjljXhRU15Ha-G}
+      client-secret: ${CT_PERF_CLIENT_SECRET:WC3nI4m624KtRrcwdg_24EjUF3RQ01A0}
+      auth-url: ${CT_PERF_AUTH_URL:https://auth.us-central1.gcp.commercetools.com}
+      api-url: ${CT_PERF_API_URL:https://api.us-central1.gcp.commercetools.com}
+
 logging:
   level:
     com.internal.tools.pubsubgui: INFO
