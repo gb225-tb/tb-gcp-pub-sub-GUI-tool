@@ -239,6 +239,49 @@ export interface CtProductResponse {
   counts?: Record<string, number>;
 }
 
+// ---- CT Clean Up ----
+export interface CtCleanupProduct {
+  id: string;
+  key: string;
+  version: number;
+  published: boolean;
+}
+
+export interface CtCleanupVariant {
+  id: string;
+  variantId: string;
+  version: number;
+  published: boolean;
+  skuCount: number;
+}
+
+export interface CtCleanupScanResponse {
+  env: string;
+  productId: string;
+  found: boolean;
+  reason?: string;
+  product?: CtCleanupProduct;
+  variants?: CtCleanupVariant[];
+  counts?: Record<string, number>;
+}
+
+export interface CtCleanupResult {
+  type: string;
+  id: string;
+  label: string;
+  deleted: boolean;
+  note?: string;
+  error?: string;
+}
+
+export interface CtCleanupDeleteResponse {
+  env: string;
+  productId: string;
+  totalDeleted: number;
+  results: CtCleanupResult[];
+  reason?: string;
+}
+
 // ---- Schemas (Bulk Post) ----
 export interface SchemaField {
   name: string;
