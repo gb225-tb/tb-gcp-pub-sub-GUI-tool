@@ -17,6 +17,7 @@ import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import StorageIcon from "@mui/icons-material/Storage";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
@@ -159,6 +160,20 @@ export function CleanupView() {
     if (!pid) return;
     if (tab === "mongo") void scanMongo(pid);
     else void scanCt(pid);
+  };
+
+  const clear = () => {
+    setProductId("");
+    if (tab === "mongo") {
+      setScanBadge(null);
+      setDeleteBadges(null);
+      setGroups((prev) => prev.map((g) => ({ ...g, collections: g.collections.map((c) => ({ ...c, count: null, checked: false })) })));
+    } else {
+      setCtScan(null);
+      setCtResult(null);
+      setCtVariantSel(new Set());
+      setCtDeleteProduct(true);
+    }
   };
 
   const delMongo = () => {
@@ -319,6 +334,9 @@ export function CleanupView() {
               />
               <Button variant="contained" startIcon={<SearchIcon />} onClick={scan}>
                 Scan
+              </Button>
+              <Button variant="outlined" color="inherit" startIcon={<ClearIcon />} onClick={clear}>
+                Clear
               </Button>
               {tab === "mongo" && scanBadge && (
                 <Chip

@@ -27,6 +27,7 @@ import Typography from "@mui/material/Typography";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 import CodeIcon from "@mui/icons-material/Code";
 import LockIcon from "@mui/icons-material/Lock";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
@@ -282,6 +283,11 @@ export function HclView() {
     void checkStatus();
   }, [checkStatus]);
 
+  const clear = () => {
+    setPartNumber("");
+    setResult(null);
+  };
+
   const fetchProduct = async () => {
     const pn = partNumber.trim();
     if (!pn) {
@@ -399,6 +405,15 @@ export function HclView() {
               sx={{ bgcolor: ACCENT, "&:hover": { bgcolor: "#0b8290" } }}
             >
               Fetch
+            </Button>
+            <Button
+              variant="outlined"
+              color="inherit"
+              startIcon={<ClearIcon />}
+              onClick={clear}
+              disabled={loading || (!partNumber && !result)}
+            >
+              Clear
             </Button>
           </Stack>
         </Stack>

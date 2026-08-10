@@ -16,6 +16,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 import { api } from "../../api/client";
 import type { MongoConfig, MongoDocumentResponse } from "../../api/types";
 import { useUi } from "../../app/UiProvider";
@@ -202,6 +203,12 @@ export function MongoView() {
     setRight(left);
   };
 
+  const clearAll = () => {
+    setLeft(initialPanel);
+    setRight(initialPanel);
+    setDiffOnly(false);
+  };
+
   const compareBoth = async () => {
     await load("left");
     await load("right");
@@ -338,6 +345,9 @@ export function MongoView() {
           </Button>
           <Button startIcon={<SwapHorizIcon />} onClick={swap}>
             Swap A/B
+          </Button>
+          <Button startIcon={<ClearIcon />} color="inherit" onClick={clearAll}>
+            Clear
           </Button>
           <FormControlLabel
             control={<Switch checked={diffOnly} onChange={(e) => setDiffOnly(e.target.checked)} />}

@@ -27,6 +27,7 @@ import Typography from "@mui/material/Typography";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 import CodeIcon from "@mui/icons-material/Code";
 import LockIcon from "@mui/icons-material/Lock";
 import CloudDoneIcon from "@mui/icons-material/CloudDone";
@@ -342,6 +343,11 @@ export function CtView() {
     void checkStatus();
   }, [checkStatus]);
 
+  const clear = () => {
+    setProductId("");
+    setResult(null);
+  };
+
   const fetchProduct = async () => {
     const pid = productId.trim();
     if (!pid) {
@@ -456,6 +462,15 @@ export function CtView() {
               sx={{ bgcolor: ACCENT, "&:hover": { bgcolor: "#d9741a" } }}
             >
               Fetch
+            </Button>
+            <Button
+              variant="outlined"
+              color="inherit"
+              startIcon={<ClearIcon />}
+              onClick={clear}
+              disabled={loading || (!productId && !result)}
+            >
+              Clear
             </Button>
           </Stack>
         </Stack>

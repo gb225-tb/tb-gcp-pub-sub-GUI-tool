@@ -10,9 +10,11 @@ import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
+import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import PodcastsIcon from "@mui/icons-material/Podcasts";
 import CloudQueueIcon from "@mui/icons-material/CloudQueue";
+import ClearIcon from "@mui/icons-material/Clear";
 import { useAppState } from "../../app/AppState";
 import type { SubscriptionInfo } from "../../api/types";
 import { TopicDetail } from "./TopicDetail";
@@ -131,24 +133,35 @@ export function PubSubView() {
               />
             ))}
           </Tabs>
-          <FormControl size="small" sx={{ width: "100%", maxWidth: 480 }}>
-            <InputLabel id="pubsub-topic-label">Topic</InputLabel>
-            <Select
-              labelId="pubsub-topic-label"
-              label="Topic"
-              value={group && selectedTopic && group.topics.includes(selectedTopic) ? selectedTopic : ""}
-              onChange={(e) => e.target.value && setSelected({ type: "topic", id: String(e.target.value) })}
-            >
-              <MenuItem value="">
-                <em>Select a topic…</em>
-              </MenuItem>
-              {(group?.topics || []).map((t) => (
-                <MenuItem key={t} value={t} sx={{ fontFamily: "monospace", fontSize: 12 }}>
-                  {t}
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ width: "100%" }}>
+            <FormControl size="small" sx={{ flex: 1, maxWidth: 480 }}>
+              <InputLabel id="pubsub-topic-label">Topic</InputLabel>
+              <Select
+                labelId="pubsub-topic-label"
+                label="Topic"
+                value={group && selectedTopic && group.topics.includes(selectedTopic) ? selectedTopic : ""}
+                onChange={(e) => e.target.value && setSelected({ type: "topic", id: String(e.target.value) })}
+              >
+                <MenuItem value="">
+                  <em>Select a topic…</em>
                 </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+                {(group?.topics || []).map((t) => (
+                  <MenuItem key={t} value={t} sx={{ fontFamily: "monospace", fontSize: 12 }}>
+                    {t}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button
+              size="small"
+              color="inherit"
+              startIcon={<ClearIcon />}
+              onClick={() => setSelected(null)}
+              disabled={!selected}
+            >
+              Clear
+            </Button>
+          </Stack>
         </Stack>
       </Paper>
 

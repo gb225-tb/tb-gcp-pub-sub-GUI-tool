@@ -49,10 +49,36 @@ const NAV: NavItem[] = [
 
 const RAIL_WIDTH = 92;
 
+function renderView(id: ViewId): ReactNode {
+  switch (id) {
+    case "pubsub":
+      return <PubSubView />;
+    case "mongo":
+      return <MongoView />;
+    case "bulk":
+      return <BulkView />;
+    case "cleanup":
+      return <CleanupView />;
+    case "hcl":
+      return <HclView />;
+    case "ct":
+      return <CtView />;
+    default:
+      return null;
+  }
+}
+
 export function AppShell() {
   const { project, setProject, reload, emulator, emulatorHost, environments } = useAppState();
   const [view, setView] = useState<ViewId>("pubsub");
   const [projectDraft, setProjectDraft] = useState(project);
+
+  // Keep-alive: mount a view on first visit and keep it mounted (hidden) afterwards so its entered
+  // inputs and fetched results survive tab switches.
+  const [visited, setVisited] = useState<Set<ViewId>>(() => new Set<ViewId>(["pubsub"]));
+  useEffect(() => {
+    setVisited((prev) => (prev.has(view) ? prev : new Set(prev).add(view)));
+  }, [view]);
 
   // Keep the editable draft in sync when the project changes elsewhere
   // (e.g. switching environments in the Pub/Sub tab).
@@ -196,12 +222,20 @@ export function AppShell() {
         </Paper>
 
         <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
-          {view === "pubsub" && <PubSubView />}
-          {view === "mongo" && <MongoView />}
-          {view === "bulk" && <BulkView />}
-          {view === "cleanup" && <CleanupView />}
-          {view === "hcl" && <HclView />}
-          {view === "ct" && <CtView />}
+          {NAV.filter((item) => visited.has(item.id)).map((item) => (
+            <Box
+              key={item.id}
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                minHeight: 0,
+                display: view === item.id ? "flex" : "none",
+                flexDirection: "column",
+              }}
+            >
+              {renderView(item.id)}
+            </Box>
+          ))}
         </Box>
       </Box>
     </Box>
