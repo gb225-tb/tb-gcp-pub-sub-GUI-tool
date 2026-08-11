@@ -2,6 +2,12 @@ server:
   port: ${PORT:8080}
 
 spring:
+  # Auto-load local-only secrets (Mongo/HCL/CT/Constructor/Cursor/GitHub) from the project root when
+  # present. Git-ignored and `optional:`, so a fresh clone still starts without it. This keeps secrets
+  # out of the committed config while letting `mvn spring-boot:run` / `java -jar` work with no manual
+  # env sourcing. Copy secrets.local.properties.example -> secrets.local.properties and fill it in.
+  config:
+    import: "optional:file:./secrets.local.properties"
   application:
     name: catalog-pubsub-gui
   webflux:

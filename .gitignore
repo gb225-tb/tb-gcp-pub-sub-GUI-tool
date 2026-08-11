@@ -30,6 +30,9 @@ src/main/resources/static/index.html
 service-account*.json
 .env
 .env.*
-# Local-only secrets moved out of application.yml (Mongo/HCL/CT/Constructor/Cursor/GitHub)
+# Local-only secrets moved out of application.yml (Mongo/HCL/CT/Constructor/Cursor/GitHub).
+# The .example template IS committed; the real filled-in file is ignored.
 secrets.local.env
 secrets.local.yml
+secrets.local.properties
+!secrets.local.properties.example
