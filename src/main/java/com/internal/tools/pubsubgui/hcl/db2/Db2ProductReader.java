@@ -49,6 +49,12 @@ public class Db2ProductReader implements ProductReader {
     private final String pricesByIds;
     private final String attributesByIds;
 
+    // Category -> products (Categories view). Optional; validated when used.
+    private final String resolveCatGroupById;
+    private final String resolveCatGroupByIdentifier;
+    private final String countProductsInCategory;
+    private final String listProductsInCategory;
+
     public Db2ProductReader(HclConfig config, HclConfig.Queries queries) {
         HclConfig.Db2 db2 = config.getDb2();
         this.driverClass = db2.getDriverClass();
@@ -68,6 +74,107 @@ public class Db2ProductReader implements ProductReader {
         this.associationsByIds = require(queries.getAssociationsByIds(), "associationsByIds");
         this.pricesByIds = require(queries.getPricesByIds(), "pricesByIds");
         this.attributesByIds = require(queries.getAttributesByIds(), "attributesByIds");
+        this.resolveCatGroupById = queries.getResolveCatGroupById();
+        this.resolveCatGroupByIdentifier = queries.getResolveCatGroupByIdentifier();
+        this.countProductsInCategory = queries.getCountProductsInCategory();
+        this.listProductsInCategory = queries.getListProductsInCategory();
+    }
+
+    // ── Category -> products (Categories view) ─────────────────────────────────
+
+    /** A resolved HCL catalog group: its numeric id and identifier string. */
+    public record CategoryRef(long catGroupId, String identifier) {
+    }
+
+    /** One product row belonging to a category (for the "view data" list). */
+    public record CategoryProduct(long catEntryId, String partNumber, String name, String published) {
+    }
+
+    /**
+     * Resolves a user-typed category value to a CATGROUP. When the value is numeric it is treated as a
+     * CATGROUP_ID; otherwise it is looked up by CATGROUP.IDENTIFIER. Returns {@code null} when not found.
+     */
+    public CategoryRef resolveCategory(Connection connection, String input) throws SQLException {
+        if (Objects.isNull(input) || input.isBlank()) {
+            return null;
+        }
+        String trimmed = input.trim();
+        Long numeric = tryParseLong(trimmed);
+        if (Objects.nonNull(numeric) && Objects.nonNull(resolveCatGroupById)) {
+            CategoryRef byId = resolveWith(connection, resolveCatGroupById, numeric);
+            if (Objects.nonNull(byId)) {
+                return byId;
+            }
+        }
+        if (Objects.nonNull(resolveCatGroupByIdentifier)) {
+            CategoryRef byIdentifier = resolveWith(connection, resolveCatGroupByIdentifier, trimmed);
+            if (Objects.nonNull(byIdentifier)) {
+                return byIdentifier;
+            }
+        }
+        // Fall back to trusting a numeric id even when CATGROUP has no row we can read.
+        return Objects.nonNull(numeric) ? new CategoryRef(numeric, null) : null;
+    }
+
+    private CategoryRef resolveWith(Connection connection, String sql, Object bind) throws SQLException {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            if (bind instanceof Long l) {
+                ps.setLong(1, l);
+            } else {
+                ps.setString(1, String.valueOf(bind));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    long id = rs.getLong(1);
+                    if (rs.wasNull()) {
+                        return null;
+                    }
+                    return new CategoryRef(id, trim(rs.getString(2)));
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Count of distinct ProductBean catentries in the category. */
+    public long countProductsInCategory(Connection connection, long catGroupId) throws SQLException {
+        String sql = require(countProductsInCategory, "countProductsInCategory");
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setLong(1, catGroupId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : 0L;
+            }
+        }
+    }
+
+    /** Product rows in the category (capped by the query's FETCH FIRST clause). */
+    public List<CategoryProduct> listProductsInCategory(Connection connection, long catGroupId) throws SQLException {
+        String sql = require(listProductsInCategory, "listProductsInCategory");
+        List<CategoryProduct> out = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setLong(1, catGroupId);
+            if (fetchSize > 0) {
+                ps.setFetchSize(fetchSize);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new CategoryProduct(
+                            rs.getLong("CATENTRY_ID"),
+                            trim(rs.getString("PARTNUMBER")),
+                            trim(rs.getString("NAME")),
+                            trim(rs.getString("PUBLISHED"))));
+                }
+            }
+        }
+        return out;
+    }
+
+    private static Long tryParseLong(String value) {
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Override

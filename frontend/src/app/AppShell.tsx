@@ -18,6 +18,7 @@ import UploadFileIcon from "@mui/icons-material/UploadFile";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import StorageIcon from "@mui/icons-material/Storage";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
+import CategoryIcon from "@mui/icons-material/Category";
 import HubIcon from "@mui/icons-material/Hub";
 
 import { useAppState } from "./AppState";
@@ -27,8 +28,9 @@ import { BulkView } from "../views/bulk/BulkView";
 import { CleanupView } from "../views/cleanup/CleanupView";
 import { HclView } from "../views/hcl/HclView";
 import { CtView } from "../views/ct/CtView";
+import { CategoriesView } from "../views/categories/CategoriesView";
 
-export type ViewId = "pubsub" | "mongo" | "bulk" | "cleanup" | "hcl" | "ct";
+export type ViewId = "pubsub" | "mongo" | "bulk" | "cleanup" | "hcl" | "ct" | "categories";
 
 interface NavItem {
   id: ViewId;
@@ -45,6 +47,7 @@ const NAV: NavItem[] = [
   { id: "cleanup", label: "Cleanup", icon: <DeleteSweepIcon />, color: "#e0413f" },
   { id: "hcl", label: "HCL", icon: <StorageIcon />, color: "#0e9aa7" },
   { id: "ct", label: "Commerce Tool", icon: <ShoppingBagIcon />, color: "#f5871f" },
+  { id: "categories", label: "Categories", icon: <CategoryIcon />, color: "#c026d3" },
 ];
 
 const RAIL_WIDTH = 92;
@@ -63,6 +66,8 @@ function renderView(id: ViewId): ReactNode {
       return <HclView />;
     case "ct":
       return <CtView />;
+    case "categories":
+      return <CategoriesView />;
     default:
       return null;
   }

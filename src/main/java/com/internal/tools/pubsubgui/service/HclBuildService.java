@@ -84,6 +84,61 @@ public class HclBuildService {
         return out;
     }
 
+    // ── Category -> products (Categories view, read-only) ──────────────────────
+
+    /**
+     * Resolves a category (numeric CATGROUP_ID or CATGROUP.IDENTIFIER) and returns the count of
+     * ProductBean catentries in it plus a capped product list for the "view data" panel. No writes.
+     */
+    public Map<String, Object> categoryProductsInHcl(String envName, String categoryInput) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("env", envName);
+        out.put("categoryId", categoryInput);
+        HclProperties.Environment env = properties.environment(envName);
+        if (Objects.isNull(env)) {
+            throw new IllegalArgumentException("Unknown HCL environment: " + envName);
+        }
+        if (Objects.isNull(categoryInput) || categoryInput.isBlank()) {
+            throw new IllegalArgumentException("categoryId is required");
+        }
+        DriverManager.setLoginTimeout(LOGIN_TIMEOUT_SECONDS);
+        Db2ProductReader reader = reader(env);
+        try (Connection connection = reader.openConnection()) {
+            Db2ProductReader.CategoryRef ref = reader.resolveCategory(connection, categoryInput.trim());
+            if (Objects.isNull(ref)) {
+                out.put("found", false);
+                out.put("reason", "No CATGROUP matched '" + categoryInput.trim() + "'");
+                out.put("count", 0);
+                out.put("products", new ArrayList<>());
+                return out;
+            }
+            long count = reader.countProductsInCategory(connection, ref.catGroupId());
+            List<Db2ProductReader.CategoryProduct> products =
+                    reader.listProductsInCategory(connection, ref.catGroupId());
+            List<Map<String, Object>> productOut = new ArrayList<>(products.size());
+            for (Db2ProductReader.CategoryProduct p : products) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("catEntryId", p.catEntryId());
+                row.put("partNumber", p.partNumber());
+                row.put("name", p.name());
+                row.put("published", p.published());
+                productOut.add(row);
+            }
+            out.put("found", true);
+            out.put("catGroupId", ref.catGroupId());
+            out.put("identifier", ref.identifier());
+            out.put("count", count);
+            out.put("productsShown", productOut.size());
+            out.put("products", productOut);
+            return out;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("HCL category lookup failed for '" + categoryInput.trim()
+                    + "': " + rootMessage(e), e);
+        }
+    }
+
     // ── Build (resolve -> read -> assemble, no writes) ─────────────────────────
 
     public Map<String, Object> buildForProductId(String envName, String partNumber) {

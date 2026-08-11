@@ -282,6 +282,84 @@ export interface CtCleanupDeleteResponse {
   reason?: string;
 }
 
+// ---- Categories ----
+export interface CategoryHclProduct {
+  catEntryId: number;
+  partNumber: string | null;
+  name: string | null;
+  published: string | null;
+}
+
+export interface CategoryHclResponse {
+  env: string;
+  categoryId: string;
+  found: boolean;
+  reason?: string;
+  catGroupId?: number;
+  identifier?: string | null;
+  count: number;
+  productsShown?: number;
+  products?: CategoryHclProduct[];
+}
+
+export interface CategoryCatalogCounts {
+  activeProducts: number;
+  activeVariants: number;
+  totalActive: number;
+  total: number;
+}
+
+export interface CategoryCatalogSummary {
+  id: string;
+  hclCategoryId: string | null;
+  name: string | null;
+  seoUrl: string | null;
+  type: string | null;
+  subType: string | null;
+  status: string | null;
+}
+
+export interface CategoryCatalogBlock {
+  database: string;
+  available: boolean;
+  error?: string;
+  categoryFound?: boolean;
+  category?: CategoryCatalogSummary;
+  categoryJson?: string;
+  counts?: CategoryCatalogCounts;
+  associations?: MongoDocument[];
+  associationsShown?: number;
+}
+
+export interface CategoryCatalogResponse {
+  env: string;
+  categoryId: string;
+  config: CategoryCatalogBlock;
+  runtime: CategoryCatalogBlock;
+}
+
+export interface CategoryConstructorResult {
+  id: string | null;
+  value: string | null;
+}
+
+export interface CategoryConstructorResponse {
+  env: string;
+  categoryId: string;
+  configured: boolean;
+  reason?: string;
+  ok?: boolean;
+  statusCode?: number;
+  apiUrl?: string;
+  requestUrl?: string;
+  groupId?: string;
+  resolvedFromCategoryId?: string;
+  categoryName?: string | null;
+  count?: number;
+  resultsShown?: number;
+  results?: CategoryConstructorResult[];
+}
+
 // ---- Schemas (Bulk Post) ----
 export interface SchemaField {
   name: string;

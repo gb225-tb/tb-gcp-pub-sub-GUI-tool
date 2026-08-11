@@ -86,6 +86,11 @@ public class HclConfig {
         private String associationsByIds;
         private String pricesByIds;
         private String attributesByIds;
+        /** Category -> products (Categories view). Optional; only required when that view is used. */
+        private String resolveCatGroupById;
+        private String resolveCatGroupByIdentifier;
+        private String countProductsInCategory;
+        private String listProductsInCategory;
     }
 
     /** Data-driven HCL attribute -&gt; field mappings per document type. */

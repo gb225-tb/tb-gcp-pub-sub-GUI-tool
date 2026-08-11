@@ -1,6 +1,8 @@
 package com.internal.tools.pubsubgui.config;
 
 import com.internal.tools.pubsubgui.hcl.config.HclConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +19,8 @@ import java.util.List;
 @Component
 @ConfigurationProperties(prefix = "hcl")
 public class HclProperties {
+
+    private static final Logger log = LoggerFactory.getLogger(HclProperties.class);
 
     /** Ordered environments surfaced in the UI, each with its own DB2 connection. */
     private List<Environment> environments = new ArrayList<>();
@@ -51,6 +55,23 @@ public class HclProperties {
         this.collections = collections == null ? new Collections() : collections;
     }
 
+    /**
+     * The first environment (other than {@code target}) that has a non-blank DB2 user, whose
+     * credentials can be borrowed when {@code target}'s are blank. Returns {@code null} if none.
+     */
+    private Environment credentialDonor(Environment target) {
+        for (Environment env : environments) {
+            if (env == target) {
+                continue;
+            }
+            String user = env.getDb2().getUser();
+            if (user != null && !user.isBlank()) {
+                return env;
+            }
+        }
+        return null;
+    }
+
     /** Returns the environment by name, or {@code null} if unknown. */
     public Environment environment(String name) {
         if (name == null) {
@@ -64,13 +85,30 @@ public class HclProperties {
         return null;
     }
 
-    /** Builds an {@link HclConfig} (DB2 + migration literals) for the given environment. */
+    /**
+     * Builds an {@link HclConfig} (DB2 + migration literals) for the given environment. When the
+     * environment's DB2 user is blank (e.g. QA, whose credentials are injected at deploy in the
+     * reference project), the credentials fall back to the first configured environment that has
+     * them — so the shared HCL DB2 stays usable with whatever HCL credentials are available.
+     */
     public HclConfig toHclConfig(Environment env) {
         HclConfig config = new HclConfig();
         HclConfig.Db2 db2 = config.getDb2();
         db2.setUrl(env.getDb2().getUrl());
-        db2.setUser(env.getDb2().getUser());
-        db2.setPassword(env.getDb2().getPassword());
+
+        String user = env.getDb2().getUser();
+        String password = env.getDb2().getPassword();
+        if (user == null || user.isBlank()) {
+            Environment donor = credentialDonor(env);
+            if (donor != null) {
+                user = donor.getDb2().getUser();
+                password = donor.getDb2().getPassword();
+                log.info("hcl db2 | env={} has no credentials — using available HCL credentials from env={}",
+                        env.getName(), donor.getName());
+            }
+        }
+        db2.setUser(user);
+        db2.setPassword(password);
         db2.setCurrentSchema(env.getDb2().getCurrentSchema());
         db2.setDriverClass(env.getDb2().getDriverClass());
         db2.setFetchSize(env.getDb2().getFetchSize());

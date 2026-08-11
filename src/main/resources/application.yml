@@ -347,6 +347,34 @@ ct:
       auth-url: ${CT_PROD_AUTH_URL:https://auth.us-central1.gcp.commercetools.com}
       api-url: ${CT_PROD_API_URL:https://api.us-central1.gcp.commercetools.com}
 
+# Constructor (constructor.io) per-environment index credentials for the Categories view. Used to
+# count products in a category via the Browse API (GET {api-url}{browse-path}/{categoryId}). apiUrl
+# defaults to the public host; index-key/auth-token are blank by default and supplied via env vars
+# (secrets are never committed, matching tb-catalog-data-processor). Until a key is set the Categories
+# view shows Constructor as "not configured".
+constructor:
+  environments:
+    - name: Dev
+      api-url: ${CONSTRUCTOR_DEV_API_URL:https://ac.cnstrc.com}
+      index-key: ${CONSTRUCTOR_DEV_INDEX_KEY:}
+      auth-token: ${CONSTRUCTOR_DEV_AUTH_TOKEN:}
+    - name: QA
+      api-url: ${CONSTRUCTOR_QA_API_URL:https://ac.cnstrc.com}
+      index-key: ${CONSTRUCTOR_QA_INDEX_KEY:}
+      auth-token: ${CONSTRUCTOR_QA_AUTH_TOKEN:}
+    - name: Perf
+      api-url: ${CONSTRUCTOR_PERF_API_URL:https://ac.cnstrc.com}
+      index-key: ${CONSTRUCTOR_PERF_INDEX_KEY:}
+      auth-token: ${CONSTRUCTOR_PERF_AUTH_TOKEN:}
+    - name: Prod
+      api-url: ${CONSTRUCTOR_PROD_API_URL:https://ac.cnstrc.com}
+      # NOTE: index-key is the PUBLIC index key (format: key_xxxxxxxx) from
+      # app.constructor.io/dashboard/accounts/api_integration for the "Commercetools - Prod" index.
+      # It is NOT the index NAME — Constructor rejects the name with HTTP 400 "invalid key".
+      # The Browse API requires this key; the auth-token below is optional (Browse is a public endpoint).
+      index-key: ${CONSTRUCTOR_PROD_INDEX_KEY:key_kqjqW5ZtTLtoJ5ec}
+      auth-token: ${CONSTRUCTOR_PROD_AUTH_TOKEN:CnstrcAuthTokV1-08182541-deb5-45b3-dd1b-4808d363aaf1-3ef7oGNGVXV2zWOl-e742a9fb-fdba-a65b-6946-8aba1926b050}
+
 logging:
   level:
     com.internal.tools.pubsubgui: INFO
