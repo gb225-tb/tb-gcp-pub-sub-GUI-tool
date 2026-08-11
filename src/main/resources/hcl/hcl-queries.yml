@@ -118,3 +118,14 @@ listProductsInCategory: |
     AND CE.CATENTTYPE_ID = 'ProductBean'
   ORDER BY CE.PARTNUMBER
   FETCH FIRST 500 ROWS ONLY
+
+# Uncapped distinct part numbers in the category (used by the cross-source reconciliation
+# in the Categories view; the driver still bounds it via a Java-side row cap).
+listAllProductPartNumbersInCategory: |
+  SELECT DISTINCT CE.PARTNUMBER
+  FROM CATGPENREL CGPR
+  INNER JOIN CATENTRY CE ON CE.CATENTRY_ID = CGPR.CATENTRY_ID
+  WHERE CGPR.CATGROUP_ID = ?
+    AND CE.CATENTTYPE_ID = 'ProductBean'
+    AND CE.PARTNUMBER IS NOT NULL
+  ORDER BY CE.PARTNUMBER

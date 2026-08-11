@@ -62,6 +62,13 @@
             <artifactId>google-cloud-monitoring</artifactId>
         </dependency>
 
+        <!-- Google Cloud Storage: used by the Perf Scenario Runner to upload sample batch inputs
+             to the inbound GCS path before triggering the batch job. Version managed by libraries-bom. -->
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-storage</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-sync</artifactId>

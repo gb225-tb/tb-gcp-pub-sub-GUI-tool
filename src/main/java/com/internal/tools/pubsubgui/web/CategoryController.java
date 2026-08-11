@@ -45,4 +45,14 @@ public class CategoryController {
                                                  @RequestParam String categoryId) {
         return Mono.fromCallable(() -> service.constructor(env, categoryId)).subscribeOn(Schedulers.boundedElastic());
     }
+
+    /**
+     * Cross-source reconciliation: full HCL / Catalog / Constructor id sets, an in-stock check against the
+     * runtime Inventory collection, and the resulting common / left-out / anomaly summary. Read-only.
+     */
+    @GetMapping("/reconcile")
+    public Mono<Map<String, Object>> reconcile(@RequestParam String env,
+                                               @RequestParam String categoryId) {
+        return Mono.fromCallable(() -> service.reconcile(env, categoryId)).subscribeOn(Schedulers.boundedElastic());
+    }
 }

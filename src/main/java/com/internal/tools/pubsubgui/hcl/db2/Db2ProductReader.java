@@ -54,6 +54,7 @@ public class Db2ProductReader implements ProductReader {
     private final String resolveCatGroupByIdentifier;
     private final String countProductsInCategory;
     private final String listProductsInCategory;
+    private final String listAllProductPartNumbersInCategory;
 
     public Db2ProductReader(HclConfig config, HclConfig.Queries queries) {
         HclConfig.Db2 db2 = config.getDb2();
@@ -78,6 +79,7 @@ public class Db2ProductReader implements ProductReader {
         this.resolveCatGroupByIdentifier = queries.getResolveCatGroupByIdentifier();
         this.countProductsInCategory = queries.getCountProductsInCategory();
         this.listProductsInCategory = queries.getListProductsInCategory();
+        this.listAllProductPartNumbersInCategory = queries.getListAllProductPartNumbersInCategory();
     }
 
     // ── Category -> products (Categories view) ─────────────────────────────────
@@ -163,6 +165,31 @@ public class Db2ProductReader implements ProductReader {
                             trim(rs.getString("PARTNUMBER")),
                             trim(rs.getString("NAME")),
                             trim(rs.getString("PUBLISHED"))));
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * All distinct product part numbers in the category (uncapped in SQL; the caller bounds the result
+     * with {@code maxRows}). Used by the cross-source reconciliation, which needs the full HCL set.
+     */
+    public List<String> listAllProductPartNumbersInCategory(Connection connection, long catGroupId, int maxRows)
+            throws SQLException {
+        String sql = require(listAllProductPartNumbersInCategory, "listAllProductPartNumbersInCategory");
+        List<String> out = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setLong(1, catGroupId);
+            if (fetchSize > 0) {
+                ps.setFetchSize(fetchSize);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next() && (maxRows <= 0 || out.size() < maxRows)) {
+                    String part = trim(rs.getString(1));
+                    if (Objects.nonNull(part) && !part.isBlank()) {
+                        out.add(part);
+                    }
                 }
             }
         }

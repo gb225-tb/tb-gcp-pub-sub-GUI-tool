@@ -139,6 +139,46 @@ public class HclBuildService {
         }
     }
 
+    /**
+     * All distinct product part numbers in the category (read-only, VPN). Returns {@code found=false}
+     * when the category can't be resolved; used by the cross-source reconciliation. Bounded by {@code maxRows}.
+     */
+    public Map<String, Object> categoryPartNumbersInHcl(String envName, String categoryInput, int maxRows) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("env", envName);
+        HclProperties.Environment env = properties.environment(envName);
+        if (Objects.isNull(env)) {
+            throw new IllegalArgumentException("Unknown HCL environment: " + envName);
+        }
+        if (Objects.isNull(categoryInput) || categoryInput.isBlank()) {
+            throw new IllegalArgumentException("categoryId is required");
+        }
+        DriverManager.setLoginTimeout(LOGIN_TIMEOUT_SECONDS);
+        Db2ProductReader reader = reader(env);
+        try (Connection connection = reader.openConnection()) {
+            Db2ProductReader.CategoryRef ref = reader.resolveCategory(connection, categoryInput.trim());
+            if (Objects.isNull(ref)) {
+                out.put("found", false);
+                out.put("reason", "No CATGROUP matched '" + categoryInput.trim() + "'");
+                out.put("partNumbers", new ArrayList<>());
+                return out;
+            }
+            long count = reader.countProductsInCategory(connection, ref.catGroupId());
+            List<String> partNumbers = reader.listAllProductPartNumbersInCategory(connection, ref.catGroupId(), maxRows);
+            out.put("found", true);
+            out.put("catGroupId", ref.catGroupId());
+            out.put("identifier", ref.identifier());
+            out.put("count", count);
+            out.put("partNumbers", partNumbers);
+            return out;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("HCL category lookup failed for '" + categoryInput.trim()
+                    + "': " + rootMessage(e), e);
+        }
+    }
+
     // ── Build (resolve -> read -> assemble, no writes) ─────────────────────────
 
     public Map<String, Object> buildForProductId(String envName, String partNumber) {

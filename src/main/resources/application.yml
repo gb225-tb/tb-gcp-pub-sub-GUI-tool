@@ -47,6 +47,15 @@ pubsub:
             - np-ecom-1-catalog_inbound_hcl_product_category_associations-topic
             - np-ecom-1-catalog_inbound_variantassociations-topic
             - np-ecom-1-catalog_inbound_hcl_promo_prices-topic
+        # Inventory inbound + CDC topics (tb-catalog-inventory-processor application-dev.yml).
+        - name: Inventory
+          topics:
+            - np-ecom-1-catalog_inbound_inventory_full_load-topic
+            - np-ecom-1-catalog_inbound_inventory_delta_load-topic
+            - np-ecom-1-catalog_inbound_inventory_availability_alert-topic
+            # dev universe-item keeps the processor's `np-ecom1-` prefix (missing hyphen) verbatim
+            - np-ecom1-catalog_inbound_inventory_universe_item-topic
+            - np-ecom-1-catalog_inventory_change-topic
         - name: Config
           topics:
             - np-ecom-1-catalog_product_change-topic
@@ -87,6 +96,14 @@ pubsub:
             - np-ecom-1-qa_catalog_inbound_hcl_product_category_associations-topic
             - np-ecom-1-qa_catalog_inbound_variantassociations-topic
             - np-ecom-1-qa_catalog_inbound_hcl_promo_prices-topic
+        # Inventory inbound + CDC topics (tb-catalog-inventory-processor application-qa.yml).
+        - name: Inventory
+          topics:
+            - np-ecom-1-qa_catalog_inbound_inventory_full_load-topic
+            - np-ecom-1-qa_catalog_inbound_inventory_delta_load-topic
+            - np-ecom-1-qa_catalog_inbound_inventory_availability_alert-topic
+            - np-ecom-1-qa_catalog_inbound_inventory_universe_item-topic
+            - np-ecom-1-qa_catalog_inventory_change-topic
         - name: Config
           topics:
             - np-ecom-1-qa_catalog_product_change-topic
@@ -127,6 +144,15 @@ pubsub:
             - np-ecom-2-catalog_inbound_variantassociations-topic
             - np-ecom-2-catalog_inbound_hcl_promo_prices-topic
             - np-ecom-2-catalog_inbound_category_publish-topic
+        # Inventory inbound + CDC topics (tb-catalog-inventory-processor application-perf.yml). Also
+        # used by the Perf Scenario Runner to publish streaming inventory samples.
+        - name: Inventory
+          topics:
+            - np-ecom-2-catalog_inbound_inventory_full_load-topic
+            - np-ecom-2-catalog_inbound_inventory_delta_load-topic
+            - np-ecom-2-catalog_inbound_inventory_availability_alert-topic
+            - np-ecom-2-catalog_inbound_inventory_universe_item-topic
+            - np-ecom-2-catalog_inventory_change-topic
         - name: Config
           topics:
             - np-ecom-2-catalog_product_change-topic
@@ -167,6 +193,16 @@ pubsub:
             - catalog_inbound_hcl_product_category_associations-topic
             - catalog_inbound_variantassociations-topic
             - catalog_inbound_hcl_promo_prices-topic
+        # Inventory inbound + CDC topics. Prod Pub/Sub is NOT defined in tb-catalog-inventory-processor's
+        # application-prod.yml, so these follow the prod unprefixed convention and are INFERRED — verify
+        # the exact names in the prod GCP project before publishing.
+        - name: Inventory
+          topics:
+            - catalog_inbound_inventory_full_load-topic
+            - catalog_inbound_inventory_delta_load-topic
+            - catalog_inbound_inventory_availability_alert-topic
+            - catalog_inbound_inventory_universe_item-topic
+            - catalog_inventory_change-topic
         - name: Config
           topics:
             - catalog_product_change-topic
@@ -202,43 +238,43 @@ mongo:
     - name: Dev
       databases:
         - name: item-config
-          uri: ${MONGO_DEV_ITEM_CONFIG:mongodb://fsctlgitemconfigadmin:CQuq1EsdRF-hhx20RQufyogx2V0gtSMGuv6VoULU49QMlxbu@54738518-6471-486e-9b8a-7a4cb25a87f8.nam7.firestore.goog:443/fs-ctlg-item-config-dvlp?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_DEV_ITEM_CONFIG:}
         - name: item-runtime
-          uri: ${MONGO_DEV_ITEM_RUNTIME:mongodb://fsctlgitemruntimeadmin:i_RADSZFjkca0pmwo2vk7vTBjrqmSrj4G5PRcJp1ugtGpPaZ@fd767d09-2a05-4a57-800e-d021a6f8715a.nam7.firestore.goog:443/fs-ctlg-item-runtime-dvlp?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_DEV_ITEM_RUNTIME:}
         - name: inventory-config
-          uri: ${MONGO_DEV_INVENTORY_CONFIG:mongodb://fsctlginventoryconfigadmin:cP8-NUraSssisc4vjKXOBhcuxo3mUwkjVkZ_bx2qJKYFiEJi@8b04b12a-6571-4da0-98ac-bc8dcacebf6a.nam7.firestore.goog:443/fs-ctlg-inventory-config-dvlp?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_DEV_INVENTORY_CONFIG:}
         - name: inventory-runtime
-          uri: ${MONGO_DEV_INVENTORY_RUNTIME:mongodb://fsctlginventoryruntimeadmin:pQPqMG-dh4bhDziPu-SfA5c92JDlTdfNyTj2s_Eg5PmlhB8h@02fc6b0c-d88e-478b-a12a-eb512a7e9111.nam7.firestore.goog:443/fs-ctlg-inventory-runtime-dvlp?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_DEV_INVENTORY_RUNTIME:}
     - name: QA
       databases:
         - name: item-config
-          uri: ${MONGO_QA_ITEM_CONFIG:mongodb://fsctlgitemconfigadmin:J2DtEc-Ru8W0Qs0Z0h5KDUbjJZoge7yU1U5lnPmGfO6FbQ-q@0411acb4-b97d-4e3b-b84a-2f02910e5919.nam7.firestore.goog:443/fs-ctlg-item-config-test?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_QA_ITEM_CONFIG:}
         - name: item-runtime
-          uri: ${MONGO_QA_ITEM_RUNTIME:mongodb://fsctlgitemruntimeadmin:t5LMsS88dW2JB93H3hVSQqcptEtIxttb6EIRu6oIx0fhuPyv@b238da0c-af39-43aa-af48-3c97adde380c.nam7.firestore.goog:443/fs-ctlg-item-runtime-test?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_QA_ITEM_RUNTIME:}
         - name: inventory-config
-          uri: ${MONGO_QA_INVENTORY_CONFIG:mongodb://fsctlginventoryconfigadmin:kxKrGOmY65Z8wAPCyBCm6cMJBGH7JdxYhBRgXgjzn8SzcycL@98f0d4e6-6039-47d4-a572-3fcb089c6826.nam7.firestore.goog:443/fs-ctlg-inventory-config-test?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_QA_INVENTORY_CONFIG:}
         - name: inventory-runtime
-          uri: ${MONGO_QA_INVENTORY_RUNTIME:mongodb://fsctlginventoryruntimeadmin:d1OBvcpFRYJJD7Brbyd2op-v6u0uaNaUKWFcUxS2J3quB9wd@1c328019-200a-470e-b597-ba46e9d37261.nam7.firestore.goog:443/fs-ctlg-inventory-runtime-test?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_QA_INVENTORY_RUNTIME:}
     - name: Perf
       databases:
         - name: item-config
-          uri: ${MONGO_PERF_ITEM_CONFIG:mongodb://fsctlgitemconfigadmin:SOyNPbOmjJym6yPAWcF8I5AUDr6oFt1jk0hE4r8YwY4uO81w@c29f011f-970f-4e7f-8297-55c16627a258.nam7.firestore.goog:443/fs-ctlg-item-config-perf?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_PERF_ITEM_CONFIG:}
         - name: item-runtime
-          uri: ${MONGO_PERF_ITEM_RUNTIME:mongodb://fsctlgitemruntimeadmin:VsnBTHTRoaZoYA6DsriJJooXK3tA1wbuT82ZdeLNoxTvD9v8@2b01eb94-78d3-4c54-9332-f30c33f367b9.nam7.firestore.goog:443/fs-ctlg-item-runtime-perf?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_PERF_ITEM_RUNTIME:}
         - name: inventory-config
-          uri: ${MONGO_PERF_INVENTORY_CONFIG:mongodb://fsctlginventoryconfigadmin:QGlRkmxWMgQ4b0_viJ0jkmoU_YalcGD5mPECNkSfj4HRmsS1@b1539e42-b5b5-4acd-ba5c-e107a950c9a4.nam7.firestore.goog:443/fs-ctlg-inventory-config-perf?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_PERF_INVENTORY_CONFIG:}
         - name: inventory-runtime
-          uri: ${MONGO_PERF_INVENTORY_RUNTIME:mongodb://fsctlginventoryruntimeadmin:lE04mxJsQmFrI105hAOF5tOt_i6_2k_r7YIZIttENukafu62@06a6c53b-1884-47b3-b011-71d07b1d76a7.nam7.firestore.goog:443/fs-ctlg-inventory-runtime-perf?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_PERF_INVENTORY_RUNTIME:}
     - name: Prod
       databases:
         - name: item-config
-          uri: ${MONGO_PROD_ITEM_CONFIG:mongodb://bg225:Znx6xCNlz0g9zRc1jAESDL6UqGe589_JcdYXfCP9GGkHxy-h@5cc9eaec-5803-45b4-bcef-02aa7be5bb35.nam7.firestore.goog:443/fs-ctlg-item-config-prod?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_PROD_ITEM_CONFIG:}
         - name: item-runtime
-          uri: ${MONGO_PROD_ITEM_RUNTIME:mongodb://bg225:jHJzDaBH0GygRSkNnohCfpERzGwSGzIFFk2xRpn_DroDu6j_@d8f3be3d-733d-441c-933c-beb42cf6ef64.nam7.firestore.goog:443/fs-ctlg-item-runtime-prod?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_PROD_ITEM_RUNTIME:}
         - name: inventory-config
-          uri: ${MONGO_PROD_INVENTORY_CONFIG:mongodb://bg225:zsYJl76tbUC7bTnJhIgPEj-NdmI_Wl4tJwjGFUaR3aZk9BAW@bde52ea0-822b-4b1b-9203-47523965b652.nam7.firestore.goog:443/fs-ctlg-inventory-config-prod?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_PROD_INVENTORY_CONFIG:}
         - name: inventory-runtime
-          uri: ${MONGO_PROD_INVENTORY_RUNTIME:mongodb://bg225:tcxGVUPFrDE9AtfcMrNVJml9eQF-bUxINnZJcsOkzB9mT54q@0182e6ca-b858-476f-bc15-3b4ecab6c431.nam7.firestore.goog:443/fs-ctlg-inventory-runtime-prod?loadBalanced=true&tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false}
+          uri: ${MONGO_PROD_INVENTORY_RUNTIME:}
 
   # Collection groups shown in the Product Clean Up view. Same across every
   # environment (only the connection URI differs). Each group maps to a logical
@@ -274,7 +310,7 @@ hcl:
       db2:
         url: ${HCL_DEV_DB2_URL:jdbc:db2://db2tst601.gcp.tmw.com:50001/wctst1}
         user: ${HCL_DEV_DB2_USER:sg362}
-        password: ${HCL_DEV_DB2_PASSWORD:Willow@5721}
+        password: ${HCL_DEV_DB2_PASSWORD:}
         current-schema: ${HCL_DEV_DB2_SCHEMA:WCS}
     - name: QA
       db2:
@@ -286,13 +322,13 @@ hcl:
       db2:
         url: ${HCL_PERF_DB2_URL:jdbc:db2://db2tst601.gcp.tmw.com:50001/wctst1}
         user: ${HCL_PERF_DB2_USER:sg362}
-        password: ${HCL_PERF_DB2_PASSWORD:Willow@5721}
+        password: ${HCL_PERF_DB2_PASSWORD:}
         current-schema: ${HCL_PERF_DB2_SCHEMA:WCS}
     - name: Prod
       db2:
         url: ${HCL_PROD_DB2_URL:jdbc:db2://db2tst601.gcp.tmw.com:50001/wctst1}
         user: ${HCL_PROD_DB2_USER:bg225}
-        password: '${HCL_PROD_DB2_PASSWORD:Harinadh18a@#$#}'
+        password: '${HCL_PROD_DB2_PASSWORD:}'
         current-schema: ${HCL_PROD_DB2_SCHEMA:WCS}
   migration:
     banner: TMW
@@ -321,19 +357,19 @@ ct:
     - name: Dev
       project-key: ${CT_DEV_PROJECT_KEY:tb-us-dev}
       client-id: ${CT_DEV_CLIENT_ID:rums-2e332gTnObYuKG5ptTb}
-      client-secret: ${CT_DEV_CLIENT_SECRET:lHbSvdZRt_jRzJpceqSNqDok79_f5avX}
+      client-secret: ${CT_DEV_CLIENT_SECRET:}
       auth-url: ${CT_DEV_AUTH_URL:https://auth.us-central1.gcp.commercetools.com}
       api-url: ${CT_DEV_API_URL:https://api.us-central1.gcp.commercetools.com}
     - name: QA
       project-key: ${CT_QA_PROJECT_KEY:tb-us-qa}
       client-id: ${CT_QA_CLIENT_ID:HXfoIJq1bEdBMGMLvsBGMt4q}
-      client-secret: ${CT_QA_CLIENT_SECRET:MJ_zRG8L7XUkgF2S9VQZSd4SRdq2FbeI}
+      client-secret: ${CT_QA_CLIENT_SECRET:}
       auth-url: ${CT_QA_AUTH_URL:https://auth.us-central1.gcp.commercetools.com}
       api-url: ${CT_QA_API_URL:https://api.us-central1.gcp.commercetools.com}
     - name: Perf
       project-key: ${CT_PERF_PROJECT_KEY:tb-us-perf}
       client-id: ${CT_PERF_CLIENT_ID:X5qSzTS8paVjljXhRU15Ha-G}
-      client-secret: ${CT_PERF_CLIENT_SECRET:WC3nI4m624KtRrcwdg_24EjUF3RQ01A0}
+      client-secret: ${CT_PERF_CLIENT_SECRET:}
       auth-url: ${CT_PERF_AUTH_URL:https://auth.us-central1.gcp.commercetools.com}
       api-url: ${CT_PERF_API_URL:https://api.us-central1.gcp.commercetools.com}
     # Prod CT: reference project ships blank CT credentials (secrets never committed).
@@ -349,31 +385,73 @@ ct:
 
 # Constructor (constructor.io) per-environment index credentials for the Categories view. Used to
 # count products in a category via the Browse API (GET {api-url}{browse-path}/{categoryId}). apiUrl
-# defaults to the public host; index-key/auth-token are blank by default and supplied via env vars
-# (secrets are never committed, matching tb-catalog-data-processor). Until a key is set the Categories
-# view shows Constructor as "not configured".
+# defaults to the public host. There is a single Constructor index ("Commercetools - Prod"), so the
+# SAME public index-key + auth-token are used for every environment by default; each is still
+# individually env-var overridable (e.g. CONSTRUCTOR_DEV_INDEX_KEY) if a per-env index is ever set up.
+# index-key is the PUBLIC index key (format: key_xxxxxxxx) from
+# app.constructor.io/dashboard/accounts/api_integration — NOT the index NAME (Constructor rejects the
+# name with HTTP 400 "invalid key"). The auth-token is optional (Browse is a public endpoint).
 constructor:
   environments:
     - name: Dev
       api-url: ${CONSTRUCTOR_DEV_API_URL:https://ac.cnstrc.com}
-      index-key: ${CONSTRUCTOR_DEV_INDEX_KEY:}
+      index-key: ${CONSTRUCTOR_DEV_INDEX_KEY:key_kqjqW5ZtTLtoJ5ec}
       auth-token: ${CONSTRUCTOR_DEV_AUTH_TOKEN:}
     - name: QA
       api-url: ${CONSTRUCTOR_QA_API_URL:https://ac.cnstrc.com}
-      index-key: ${CONSTRUCTOR_QA_INDEX_KEY:}
+      index-key: ${CONSTRUCTOR_QA_INDEX_KEY:key_kqjqW5ZtTLtoJ5ec}
       auth-token: ${CONSTRUCTOR_QA_AUTH_TOKEN:}
     - name: Perf
       api-url: ${CONSTRUCTOR_PERF_API_URL:https://ac.cnstrc.com}
-      index-key: ${CONSTRUCTOR_PERF_INDEX_KEY:}
+      index-key: ${CONSTRUCTOR_PERF_INDEX_KEY:key_kqjqW5ZtTLtoJ5ec}
       auth-token: ${CONSTRUCTOR_PERF_AUTH_TOKEN:}
     - name: Prod
       api-url: ${CONSTRUCTOR_PROD_API_URL:https://ac.cnstrc.com}
-      # NOTE: index-key is the PUBLIC index key (format: key_xxxxxxxx) from
-      # app.constructor.io/dashboard/accounts/api_integration for the "Commercetools - Prod" index.
-      # It is NOT the index NAME — Constructor rejects the name with HTTP 400 "invalid key".
-      # The Browse API requires this key; the auth-token below is optional (Browse is a public endpoint).
       index-key: ${CONSTRUCTOR_PROD_INDEX_KEY:key_kqjqW5ZtTLtoJ5ec}
-      auth-token: ${CONSTRUCTOR_PROD_AUTH_TOKEN:CnstrcAuthTokV1-08182541-deb5-45b3-dd1b-4808d363aaf1-3ef7oGNGVXV2zWOl-e742a9fb-fdba-a65b-6946-8aba1926b050}
+      auth-token: ${CONSTRUCTOR_PROD_AUTH_TOKEN:}
+
+# Automation view: AI failure analysis. Provider is one of heuristic | openai | cursor.
+# Default provider is `cursor` with a committed CURSOR_API_KEY default (override via the env var).
+# Default provider is `heuristic`: a fast, offline, rule-based analyzer that explains each failed check
+# (root cause, impact, where to look) with zero credentials or network — see HeuristicAnalyzer.
+# For a real LLM set provider=openai with base-url (e.g. https://api.openai.com/v1), api-key and model
+# for any OpenAI-compatible chat endpoint. The `cursor` provider drives the Cloud Agents API
+# (https://api.cursor.com/v1/agents), which is repo-oriented and async (minutes per run) — it is NOT an
+# OpenAI-compatible chat endpoint, so it is not suitable for quick failure explanations and is left off
+# by default.
+automation:
+  ai:
+    provider: ${AUTOMATION_AI_PROVIDER:heuristic}
+    base-url: ${AUTOMATION_AI_BASE_URL:}
+    api-key: ${AUTOMATION_AI_API_KEY:}
+    model: ${AUTOMATION_AI_MODEL:gpt-4o-mini}
+    cursor-api-key: ${CURSOR_API_KEY:}
+    cursor-base-url: ${CURSOR_API_BASE_URL:https://api.cursor.com}
+    cursor-model: ${CURSOR_AI_MODEL:}
+    timeout-seconds: ${AUTOMATION_AI_TIMEOUT_SECONDS:30}
+    cursor-max-wait-seconds: ${CURSOR_AI_MAX_WAIT_SECONDS:150}
+
+# Perf-only Scenario Runner. Injects a controlled input for a Catalog/Inventory job (Pub/Sub publish
+# for streaming; GCS upload + GitHub workflow_dispatch for batch), waits, then re-uses the read-only
+# validators to verify the outcome. enforce-perf-only hard-blocks every environment except Perf.
+scenario:
+  enforce-perf-only: ${SCENARIO_ENFORCE_PERF_ONLY:true}
+  # Perf GCP project the scenarios publish/verify against.
+  project-id: ${SCENARIO_PROJECT_ID:np-ecom-2-6d1a}
+  # Seconds to wait after a streaming publish before running the verify validators.
+  stream-wait-seconds: ${SCENARIO_STREAM_WAIT_SECONDS:5}
+  # Max seconds to wait for a batch GitHub run to complete before giving up and verifying anyway.
+  batch-timeout-seconds: ${SCENARIO_BATCH_TIMEOUT_SECONDS:420}
+  # Polling interval (seconds) while waiting on the batch GitHub run.
+  batch-poll-seconds: ${SCENARIO_BATCH_POLL_SECONDS:15}
+
+# GitHub Actions used to trigger batch Dataflow runs via workflow_dispatch. Token is blank by default
+# (batch scenarios are disabled in the UI until one is supplied). Needs `actions:write` + `contents:read`
+# on the two processor repos. ref is the branch the workflow is dispatched on.
+github:
+  token: ${GITHUB_TOKEN:}
+  ref: ${GITHUB_REF:develop}
+  api-base: ${GITHUB_API_BASE:https://api.github.com}
 
 logging:
   level:

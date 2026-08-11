@@ -29,3 +29,7 @@ src/main/resources/static/index.html
 *-credentials.json
 service-account*.json
 .env
+.env.*
+# Local-only secrets moved out of application.yml (Mongo/HCL/CT/Constructor/Cursor/GitHub)
+secrets.local.env
+secrets.local.yml

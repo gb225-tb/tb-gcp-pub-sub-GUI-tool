@@ -91,6 +91,8 @@ public class HclConfig {
         private String resolveCatGroupByIdentifier;
         private String countProductsInCategory;
         private String listProductsInCategory;
+        /** Uncapped distinct part numbers in a category (cross-source reconciliation). */
+        private String listAllProductPartNumbersInCategory;
     }
 
     /** Data-driven HCL attribute -&gt; field mappings per document type. */

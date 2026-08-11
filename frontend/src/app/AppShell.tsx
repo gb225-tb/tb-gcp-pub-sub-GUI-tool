@@ -19,6 +19,7 @@ import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import StorageIcon from "@mui/icons-material/Storage";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import CategoryIcon from "@mui/icons-material/Category";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
 import HubIcon from "@mui/icons-material/Hub";
 
 import { useAppState } from "./AppState";
@@ -29,8 +30,17 @@ import { CleanupView } from "../views/cleanup/CleanupView";
 import { HclView } from "../views/hcl/HclView";
 import { CtView } from "../views/ct/CtView";
 import { CategoriesView } from "../views/categories/CategoriesView";
+import { AutomationView } from "../views/automation/AutomationView";
 
-export type ViewId = "pubsub" | "mongo" | "bulk" | "cleanup" | "hcl" | "ct" | "categories";
+export type ViewId =
+  | "pubsub"
+  | "mongo"
+  | "bulk"
+  | "cleanup"
+  | "hcl"
+  | "ct"
+  | "categories"
+  | "automation";
 
 interface NavItem {
   id: ViewId;
@@ -48,6 +58,7 @@ const NAV: NavItem[] = [
   { id: "hcl", label: "HCL", icon: <StorageIcon />, color: "#0e9aa7" },
   { id: "ct", label: "Commerce Tool", icon: <ShoppingBagIcon />, color: "#f5871f" },
   { id: "categories", label: "Categories", icon: <CategoryIcon />, color: "#c026d3" },
+  { id: "automation", label: "Automation", icon: <FactCheckIcon />, color: "#0284c7" },
 ];
 
 const RAIL_WIDTH = 92;
@@ -68,6 +79,8 @@ function renderView(id: ViewId): ReactNode {
       return <CtView />;
     case "categories":
       return <CategoriesView />;
+    case "automation":
+      return <AutomationView />;
     default:
       return null;
   }

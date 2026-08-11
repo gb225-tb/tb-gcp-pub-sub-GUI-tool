@@ -1,0 +1,31 @@
+{
+  "ItemId": "TMW5B7U75372",
+  "Status": "AVAILABLE",
+  "StatusCode": 2,
+  "NextAvailabilityDate": null,
+  "ViewName": "TMW Ecomm Shipping & STS",
+  "ViewId": "TMW_Ecomm_Shipping_STS",
+  "TransactionDateTime": "2026-01-28T06:21:20.340",
+  "TotalQuantity": 39,
+  "TotalIncludingSubstituteItems": 39,
+  "SubstituteItemsAvailable": false,
+  "OnHandQuantity": 39,
+  "OnHandStatus": "AVAILABLE",
+  "OnHandStatusCode": 2,
+  "FutureQuantity": 0,
+  "ProcureSupply": false,
+  "SupersessionSKUs": [],
+  "OutOfStockReasons": [],
+  "Quantity": {
+    "DistributionCenters": 18,
+    "Stores": 21
+  },
+  "NetworkProtectionQuantity": {
+    "NoProtection": 0,
+    "View": 0
+  },
+  "QuantityInOrderingUOM": [],
+  "IsKitItem": false,
+  "IsInfiniteAvailability": false,
+  "TransactionNumber": "6ef9a13a-1f66-4aa4-bce1-5286b1efba2f"
+}

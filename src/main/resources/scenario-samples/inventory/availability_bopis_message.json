@@ -1,0 +1,23 @@
+{
+  "ItemId": "TMW5B7U75372",
+  "LocationId": "2706",
+  "Status": "LIMITED_STOCK",
+  "StatusCode": 1,
+  "Quantity": 2,
+  "NextAvailabilityDate": null,
+  "TransactionDateTime": "2026-01-28T06:33:51.005",
+  "ViewName": "TMW BOPIS",
+  "ViewId": "TMW_BOPIS",
+  "TotalIncludingSubstituteItems": 1,
+  "SubstituteItemsAvailable": false,
+  "OnHandQuantity": 1,
+  "OnHandStatus": "LIMITED_STOCK",
+  "OnHandStatusCode": 1,
+  "ProcureSupply": false,
+  "SupersessionSKUs": [],
+  "OutOfStockReasons": [],
+  "QuantityInOrderingUOM": [],
+  "IsKitItem": false,
+  "IsInfiniteAvailability": false,
+  "TransactionNumber": "6ef9a13a-1f66-4aa4-bce1-5286b1efba2f"
+}

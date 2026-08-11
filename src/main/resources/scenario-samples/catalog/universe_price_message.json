@@ -1,0 +1,14 @@
+{
+  "PriceListName": "TMWCASList",
+  "CatentryPartNumber": "TMW94FM36101",
+  "Precedence": 0,
+  "StartDate": "2026-03-24 00:00:00.000000000",
+  "EndDate": "",
+  "QuantityUnitIdentifier": "C62",
+  "MinimumQuantity": 1,
+  "MaximumQuantity": "",
+  "LastUpdate": "2026-03-24 00:00:00.000000000",
+  "PriceinUSD": 249.99,
+  "Delete": 0,
+  "_DeltaStatus": "249.99"
+}

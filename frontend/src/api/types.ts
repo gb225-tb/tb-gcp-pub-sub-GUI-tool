@@ -360,6 +360,260 @@ export interface CategoryConstructorResponse {
   results?: CategoryConstructorResult[];
 }
 
+// ---- Categories: cross-source reconciliation ----
+export interface CategoryReconcileSourceBlock {
+  available: boolean;
+  error?: string;
+  reason?: string;
+  count?: number;
+  distinct?: number;
+  categoryFound?: boolean;
+  categoryId?: string;
+  categoryName?: string | null;
+  catGroupId?: number;
+  groupId?: string;
+  database?: string;
+}
+
+export interface CategoryReconcileInventoryBlock {
+  available: boolean;
+  error?: string;
+  database?: string;
+  skuCount?: number;
+  inStockSkuCount?: number;
+  inStockProductCount?: number;
+}
+
+export interface CategoryReconcileRow {
+  id: string;
+  hcl: boolean;
+  catalog: boolean;
+  constructor: boolean;
+  inStock: boolean;
+}
+
+export interface CategoryReconcileSummary {
+  hclAvailable: boolean;
+  catalogAvailable: boolean;
+  constructorAvailable: boolean;
+  inventoryAvailable: boolean;
+  unionCount: number;
+  commonAllCount: number;
+  commonAll: string[];
+  missingFromHclCount: number;
+  missingFromHcl: string[];
+  missingFromCatalogCount: number;
+  missingFromCatalog: string[];
+  missingFromConstructorCount: number;
+  missingFromConstructor: string[];
+  inStockNotInConstructorCount: number;
+  inStockNotInConstructor: string[];
+  constructorNotInStockCount: number;
+  constructorNotInStock: string[];
+  matrixShown: number;
+  matrix: CategoryReconcileRow[];
+}
+
+export interface CategoryReconcileResponse {
+  env: string;
+  categoryId: string;
+  hcl: CategoryReconcileSourceBlock;
+  catalog: CategoryReconcileSourceBlock;
+  constructor: CategoryReconcileSourceBlock;
+  inventory: CategoryReconcileInventoryBlock;
+  summary: CategoryReconcileSummary;
+}
+
+// ---- Automation (read-only scenario runner) ----
+export interface AutomationGroup {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface AutomationScenario {
+  id: string;
+  group: string;
+  groupLabel: string;
+  category: string;
+  title: string;
+  priority: string;
+  feasibility: "READONLY" | "NOT_APPLICABLE";
+  requiresProductId: boolean;
+  note: string;
+  /** Verbatim scenario spec from the test-plan workbook (Scenario -> Expected result). */
+  spec: string;
+}
+
+export interface AutomationCatalog {
+  groups: AutomationGroup[];
+  scenarios: AutomationScenario[];
+}
+
+export interface AutomationFieldDiff {
+  field: string;
+  docType: string;
+  expected: string | null;
+  actual: string | null;
+  verdict: "MATCH" | "DIFFERS" | "GAP" | string;
+}
+
+export type CheckStatus = "PASS" | "FAIL" | "SKIP" | "NA" | "ERROR";
+
+export interface AutomationCheckResult {
+  scenarioId: string;
+  status: CheckStatus;
+  checked: number;
+  failed: number;
+  message: string;
+  expected: string | null;
+  actual: string | null;
+  sampleIds: string[];
+  diffs: AutomationFieldDiff[];
+}
+
+/** The scenario definition as embedded in a run result (subset of the catalog entry). */
+export interface AutomationScenarioDef {
+  id: string;
+  group: string;
+  category: string;
+  title: string;
+  priority: string;
+  feasibility: "READONLY" | "NOT_APPLICABLE";
+  note: string;
+  /** Verbatim scenario spec from the test-plan workbook (Scenario -> Expected result). */
+  spec: string;
+}
+
+export interface AutomationScenarioResult {
+  scenario: AutomationScenarioDef;
+  result: AutomationCheckResult;
+}
+
+export interface AutomationRunSummary {
+  env: string;
+  productId: string | null;
+  sampleSize: number;
+  startedAt: string;
+  finishedAt: string;
+  durationMs: number;
+  total: number;
+  passed: number;
+  failed: number;
+  skipped: number;
+  notApplicable: number;
+  errored: number;
+  results: AutomationScenarioResult[];
+}
+
+export interface AutomationRunRequest {
+  env: string;
+  group?: string;
+  scenarioIds?: string[];
+  all?: boolean;
+  productId?: string;
+  sampleSize?: number;
+}
+
+export interface AutomationAiStatus {
+  configuredProvider: string;
+  effectiveProvider: string;
+  llmConfigured: boolean;
+  model: string | null;
+}
+
+export interface AutomationAiResponse {
+  provider: string;
+  configured: boolean;
+  analysis: string;
+}
+
+// ---- Scenario Runner (Perf-only injection + verify) ----
+export type ScenarioKind = "STREAMING" | "BATCH";
+
+export interface ScenarioCategoryMeta {
+  id: string;
+  label: string;
+}
+
+export interface ScenarioSpec {
+  id: string;
+  category: string;
+  categoryLabel: string;
+  shortName: string;
+  kind: ScenarioKind;
+  processor: string;
+  description: string;
+  enabled: boolean;
+  target: string;
+  topicId: string | null;
+  gcsBucket: string | null;
+  gcsObjectPrefix: string | null;
+  defaultFileName: string | null;
+  githubRepo: string | null;
+  workflowFile: string | null;
+}
+
+export interface ScenarioGithubStatus {
+  configured: boolean;
+  ref: string;
+}
+
+export interface ScenarioCatalog {
+  categories: ScenarioCategoryMeta[];
+  scenarios: ScenarioSpec[];
+  perfOnly: boolean;
+  perfEnv: string;
+  projectId: string;
+  streamWaitSeconds: number;
+  batchTimeoutSeconds: number;
+  github: ScenarioGithubStatus;
+}
+
+export interface ScenarioSample {
+  id: string;
+  kind: ScenarioKind;
+  fileName: string | null;
+  content: string;
+}
+
+export type PhaseStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED" | "SKIPPED";
+
+export interface ScenarioRunPhase {
+  name: string;
+  status: PhaseStatus;
+  startedAt: string | null;
+  finishedAt: string | null;
+  detail: string | null;
+}
+
+export interface ScenarioRunState {
+  runId: string;
+  scenarioId: string;
+  shortName: string;
+  category: string;
+  kind: ScenarioKind;
+  env: string;
+  startedAt: string;
+  finishedAt: string | null;
+  /** RUNNING | PASS | FAIL | ERROR */
+  status: string;
+  message: string;
+  done: boolean;
+  injection: Record<string, unknown>;
+  phases: ScenarioRunPhase[];
+  verify: AutomationRunSummary | null;
+}
+
+export interface ScenarioRunRequest {
+  env: string;
+  scenarioId: string;
+  payloadOverride?: string;
+  version?: string;
+  fileName?: string;
+  fileBase64?: string;
+}
+
 // ---- Schemas (Bulk Post) ----
 export interface SchemaField {
   name: string;

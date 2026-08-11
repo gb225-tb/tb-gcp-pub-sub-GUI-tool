@@ -19,23 +19,30 @@ import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
+import CheckIcon from "@mui/icons-material/Check";
 import CodeIcon from "@mui/icons-material/Code";
 import StorageIcon from "@mui/icons-material/Storage";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import TravelExploreIcon from "@mui/icons-material/TravelExplore";
 import CategoryIcon from "@mui/icons-material/Category";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
+import HubIcon from "@mui/icons-material/Hub";
 import { api } from "../../api/client";
 import type {
   CategoryCatalogBlock,
   CategoryCatalogResponse,
   CategoryConstructorResponse,
   CategoryHclResponse,
+  CategoryReconcileResponse,
+  CategoryReconcileRow,
   MongoDocument,
 } from "../../api/types";
 import { useAppState } from "../../app/AppState";
@@ -245,6 +252,205 @@ function CatalogDbBlock({ block, color }: { block: CategoryCatalogBlock; color: 
   );
 }
 
+/** A single membership cell: filled green tick when present, hollow ring when absent. */
+function Flag({ on, color = "#1aa564" }: { on: boolean; color?: string }) {
+  return on ? (
+    <Box sx={{ width: 18, height: 18, borderRadius: "50%", bgcolor: color, display: "grid", placeItems: "center", mx: "auto" }}>
+      <CheckIcon sx={{ fontSize: 13, color: "#fff" }} />
+    </Box>
+  ) : (
+    <Box sx={{ width: 18, height: 18, borderRadius: "50%", border: "1.5px solid", borderColor: "grey.300", mx: "auto" }} />
+  );
+}
+
+/** A compact stat tile used in the summary header. */
+function StatTile({ value, label, color, hint }: { value: number | string; label: string; color: string; hint?: string }) {
+  return (
+    <Tooltip title={hint || ""} disableHoverListener={!hint}>
+      <Paper
+        variant="outlined"
+        sx={{ px: 1.75, py: 1, borderRadius: 2, minWidth: 118, borderColor: `${color}55`, bgcolor: `${color}0d` }}
+      >
+        <Typography sx={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color }}>{value}</Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>
+          {label}
+        </Typography>
+      </Paper>
+    </Tooltip>
+  );
+}
+
+type MatrixFilter = "all" | "common" | "missHcl" | "missCatalog" | "missCtor" | "inStockNotCtor" | "ctorNotStock";
+
+function matchesFilter(r: CategoryReconcileRow, f: MatrixFilter): boolean {
+  switch (f) {
+    case "common":
+      return r.hcl && r.catalog && r.constructor;
+    case "missHcl":
+      return !r.hcl && (r.catalog || r.constructor);
+    case "missCatalog":
+      return !r.catalog && (r.hcl || r.constructor);
+    case "missCtor":
+      return !r.constructor && (r.hcl || r.catalog);
+    case "inStockNotCtor":
+      return r.inStock && !r.constructor;
+    case "ctorNotStock":
+      return r.constructor && !r.inStock;
+    default:
+      return true;
+  }
+}
+
+/** The headline reconciliation card: aggregate stats, source coverage and a filterable membership matrix. */
+function ReconcileSummary({ data, loading, error }: { data?: CategoryReconcileResponse; loading: boolean; error?: string }) {
+  const [filter, setFilter] = useState<MatrixFilter>("all");
+
+  const rows = useMemo(() => {
+    if (!data) return [];
+    return data.summary.matrix.filter((r) => matchesFilter(r, filter));
+  }, [data, filter]);
+
+  const header = (
+    <Stack
+      direction="row"
+      alignItems="center"
+      spacing={1}
+      sx={{ px: 2, py: 1.25, bgcolor: `${ACCENT}12`, borderBottom: "1px solid", borderColor: "divider" }}
+    >
+      <Box sx={{ width: 30, height: 30, borderRadius: 2, display: "grid", placeItems: "center", bgcolor: ACCENT, color: "#fff" }}>
+        <HubIcon fontSize="small" />
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: ACCENT }}>
+          Reconciliation summary
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Products shared across HCL, Catalog & Constructor and the ones each source is missing. Constructor only lists
+          <b> in-stock</b> products (runtime Inventory <code>totalQuantity&nbsp;&gt;&nbsp;0</code>).
+        </Typography>
+      </Box>
+      {loading && <CircularProgress size={16} sx={{ color: ACCENT }} />}
+    </Stack>
+  );
+
+  return (
+    <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+      {header}
+      <Box sx={{ p: 2 }}>
+        {error ? (
+          <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: "#fdeaea", border: "1px solid #f5c2c0" }}>
+            <Typography variant="caption" sx={{ color: "#a12b29" }}>{error}</Typography>
+          </Box>
+        ) : !data ? (
+          <Typography variant="body2" color="text.secondary">
+            {loading ? "Reconciling sources…" : "No reconciliation yet."}
+          </Typography>
+        ) : (
+          <Stack spacing={2}>
+            {/* aggregate stats */}
+            <Stack direction="row" spacing={1.25} flexWrap="wrap" useFlexGap>
+              <StatTile value={data.summary.commonAllCount} label="common (all 3)" color="#1aa564" hint="Present in HCL, Catalog and Constructor" />
+              <StatTile value={data.summary.unionCount} label="total distinct" color={ACCENT} hint="Union of product ids across the sources" />
+              <StatTile value={data.hcl.count ?? "—"} label="HCL" color="#0e9aa7" hint={data.hcl.available ? undefined : data.hcl.error || data.hcl.reason} />
+              <StatTile value={data.catalog.count ?? "—"} label="Catalog" color={ACCENT} hint={data.catalog.available ? undefined : data.catalog.error} />
+              <StatTile value={data.constructor.count ?? "—"} label="Constructor" color="#f5871f" hint={data.constructor.available ? undefined : data.constructor.reason || data.constructor.error} />
+              <StatTile
+                value={data.inventory.available ? data.inventory.inStockProductCount ?? "—" : "—"}
+                label="in stock"
+                color="#2f6bff"
+                hint={data.inventory.available
+                  ? `${data.inventory.inStockSkuCount ?? 0} in-stock SKUs across ${data.inventory.skuCount ?? 0} SKUs (inventory-runtime)`
+                  : data.inventory.error}
+              />
+            </Stack>
+
+            {/* inventory reconciliation callout */}
+            {data.inventory.available && (
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: "#eef4ff", border: "1px solid #cadcff" }}>
+                <Stack direction="row" spacing={1} alignItems="flex-start">
+                  <Inventory2Icon fontSize="small" sx={{ color: "#2f6bff", mt: 0.25 }} />
+                  <Typography variant="caption" sx={{ color: "#274b8f" }}>
+                    <b>{data.inventory.inStockProductCount ?? 0}</b> products have in-stock inventory vs{" "}
+                    <b>{data.constructor.count ?? 0}</b> in Constructor.{" "}
+                    {data.summary.inStockNotInConstructorCount > 0 && (
+                      <>
+                        <b>{data.summary.inStockNotInConstructorCount}</b> are in stock but missing from Constructor.{" "}
+                      </>
+                    )}
+                    {data.summary.constructorNotInStockCount > 0 && (
+                      <>
+                        <b>{data.summary.constructorNotInStockCount}</b> are in Constructor but show no in-stock SKU.
+                      </>
+                    )}
+                    {data.summary.inStockNotInConstructorCount === 0 && data.summary.constructorNotInStockCount === 0 && (
+                      <>Constructor matches the in-stock set exactly.</>
+                    )}
+                  </Typography>
+                </Stack>
+              </Box>
+            )}
+
+            {/* filter chips */}
+            <ToggleButtonGroup
+              size="small"
+              value={filter}
+              exclusive
+              onChange={(_, v) => v && setFilter(v)}
+              sx={{ flexWrap: "wrap", "& .MuiToggleButton-root": { textTransform: "none", px: 1.25, py: 0.4 } }}
+            >
+              <ToggleButton value="all">All ({data.summary.unionCount})</ToggleButton>
+              <ToggleButton value="common">Common ({data.summary.commonAllCount})</ToggleButton>
+              <ToggleButton value="missHcl">Not in HCL ({data.summary.missingFromHclCount})</ToggleButton>
+              <ToggleButton value="missCatalog">Not in Catalog ({data.summary.missingFromCatalogCount})</ToggleButton>
+              <ToggleButton value="missCtor">Not in Constructor ({data.summary.missingFromConstructorCount})</ToggleButton>
+              <ToggleButton value="inStockNotCtor">In stock · not in Constructor ({data.summary.inStockNotInConstructorCount})</ToggleButton>
+              <ToggleButton value="ctorNotStock">Constructor · out of stock ({data.summary.constructorNotInStockCount})</ToggleButton>
+            </ToggleButtonGroup>
+
+            {/* membership matrix */}
+            <Box sx={{ maxHeight: 360, overflow: "auto", border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+              <Table size="small" stickyHeader sx={{ "& td, & th": { borderColor: "divider" } }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 700 }}>Product id</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#0e9aa7" }}>HCL</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: ACCENT }}>Catalog</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#f5871f" }}>Constructor</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "#2f6bff" }}>In stock</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rows.map((r) => (
+                    <TableRow key={r.id} hover>
+                      <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>{r.id}</TableCell>
+                      <TableCell align="center"><Flag on={r.hcl} color="#0e9aa7" /></TableCell>
+                      <TableCell align="center"><Flag on={r.catalog} color={ACCENT} /></TableCell>
+                      <TableCell align="center"><Flag on={r.constructor} color="#f5871f" /></TableCell>
+                      <TableCell align="center"><Flag on={r.inStock} color="#2f6bff" /></TableCell>
+                    </TableRow>
+                  ))}
+                  {rows.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5}>
+                        <Typography variant="caption" color="text.secondary">No products match this filter.</Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Box>
+            {data.summary.matrixShown < data.summary.unionCount && (
+              <Typography variant="caption" color="text.secondary">
+                Showing first {data.summary.matrixShown} of {data.summary.unionCount} products.
+              </Typography>
+            )}
+          </Stack>
+        )}
+      </Box>
+    </Paper>
+  );
+}
+
 export function CategoriesView() {
   const { toast } = useUi();
   const { environments, activeEnv, setActiveEnv } = useAppState();
@@ -264,6 +470,7 @@ export function CategoriesView() {
   const [hcl, setHcl] = useState<Slot<CategoryHclResponse>>(emptySlot);
   const [catalog, setCatalog] = useState<Slot<CategoryCatalogResponse>>(emptySlot);
   const [constructor, setConstructor] = useState<Slot<CategoryConstructorResponse>>(emptySlot);
+  const [reconcile, setReconcile] = useState<Slot<CategoryReconcileResponse>>(emptySlot);
 
   const checkStatus = useCallback(async () => {
     if (!env) return;
@@ -324,6 +531,21 @@ export function CategoriesView() {
     [env]
   );
 
+  const loadReconcile = useCallback(
+    async (cat: string) => {
+      setReconcile({ loading: true });
+      try {
+        const data = await api<CategoryReconcileResponse>("/api/category/reconcile", {
+          params: { env, categoryId: cat },
+        });
+        setReconcile({ loading: false, data });
+      } catch (e) {
+        setReconcile({ loading: false, error: (e as Error).message });
+      }
+    },
+    [env]
+  );
+
   const fetchAll = () => {
     const cat = categoryId.trim();
     if (!cat) {
@@ -334,6 +556,7 @@ export function CategoriesView() {
     void loadHcl(cat);
     void loadCatalog(cat);
     void loadConstructor(cat);
+    void loadReconcile(cat);
   };
 
   const clear = () => {
@@ -342,6 +565,7 @@ export function CategoriesView() {
     setHcl(emptySlot());
     setCatalog(emptySlot());
     setConstructor(emptySlot());
+    setReconcile(emptySlot());
   };
 
   const bulbInfo = BULB[bulb];
@@ -457,6 +681,8 @@ export function CategoriesView() {
             </Stack>
           </Box>
         ) : (
+          <Stack spacing={2}>
+            <ReconcileSummary data={reconcile.data} loading={reconcile.loading} error={reconcile.error} />
           <Box
             sx={{
               display: "grid",
@@ -600,6 +826,7 @@ export function CategoriesView() {
               )}
             </SourcePanel>
           </Box>
+          </Stack>
         )}
       </Box>
     </Box>
