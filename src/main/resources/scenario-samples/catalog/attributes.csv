@@ -1,0 +1,4 @@
+name,level,dataType,displayName,description,isSearchable,isDisplayable,isFacetable,isCategoryRuleEligible
+accessoryStyle,product,string,Accessory Style,Accessory Style,1,,1,
+altImage,variant,string,Alt Image,Alt Image,,1,,
+averageRoundedRating,product,double,Rating,Rating,1,1,1,1

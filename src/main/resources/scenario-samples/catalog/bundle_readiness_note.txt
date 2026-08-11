@@ -1,0 +1,27 @@
+UniverseItemBundleBatchProcessor — Bundle Readiness (RFW-4262)
+
+THIS JOB CONSUMES NO INPUT FILE.
+
+It is a MongoDB-derived batch: it reads the existing item-config Product / Variant / SKU / Price
+collections plus runtime Inventory, walks the UC4 bundle graph, and writes DERIVED bundle facets back
+to item-config only:
+
+  - Bundle SKU size    <- copied from the matching component SKU (inventory-gated)
+  - Bundle SKU price   <- sum of per-component minimum list/sale/promo prices (inventory-gated)
+  - Bundle SKU clearance <- AND across components
+  - Bundle Product attrs <- pant component -> pantStyle/pantFinish; jacket component -> origin/badges
+
+Bundle scope contract (UC4 BUNDLES CTE):  isBundle=true AND status=ACTIVE AND markForDelete=false.
+Component links live on  Variant.productAssociation  (e.g. ["TMW_3LB8_70","TMW_3LBA_70"]).
+
+PREREQUISITE ORDER (perf):
+  1. UniverseItemFullLoadBatchProcessor  (creates Product/Variant/SKU with isBundle + productAssociation)
+  2. Universe price feed + runtime Inventory AVAILABLE for the component SKUs
+  3. UniverseItemBundleBatchProcessor    (this job — derives + patches the bundle facets)
+
+HOW THIS SCENARIO RUNS:
+  - No GCS upload. It dispatches np-batch-scheduler.yaml with processor=UniverseItemBundleBatchProcessor,
+    environment=perf, version=<you supply>, then polls the run to completion.
+  - The primary success signal is the dispatched batch run completing successfully.
+  - Verify (secondary evidence): a bundle Product exists in item-config.Product with isBundle=true
+    (golden id: TMW_30AB, a 2-piece suit bundle).

@@ -4,6 +4,8 @@ import com.internal.tools.pubsubgui.automation.AutomationEngine;
 import com.internal.tools.pubsubgui.automation.ai.AiAnalysisService;
 import com.internal.tools.pubsubgui.automation.model.AiAnalyzeRequest;
 import com.internal.tools.pubsubgui.automation.model.AiAnalyzeResponse;
+import com.internal.tools.pubsubgui.automation.model.HclRawCompareRequest;
+import com.internal.tools.pubsubgui.automation.model.HclRawCompareResponse;
 import com.internal.tools.pubsubgui.automation.model.RunRequest;
 import com.internal.tools.pubsubgui.automation.model.RunSummary;
 import com.internal.tools.pubsubgui.automation.model.ScenarioDef;
@@ -77,6 +79,12 @@ public class AutomationController {
     @PostMapping("/run")
     public Mono<RunSummary> run(@RequestBody RunRequest request) {
         return Mono.fromCallable(() -> engine.run(request)).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /** Compare one raw HCL DB record against its streaming Catalog document (read-only; VPN + DB2). */
+    @PostMapping("/hcl-compare")
+    public Mono<HclRawCompareResponse> hclCompare(@RequestBody HclRawCompareRequest request) {
+        return Mono.fromCallable(() -> engine.hclRawCompare(request)).subscribeOn(Schedulers.boundedElastic());
     }
 
     /** Explain one or more failed scenarios (LLM if configured, heuristic otherwise). */

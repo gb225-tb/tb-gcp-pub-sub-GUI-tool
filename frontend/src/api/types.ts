@@ -455,7 +455,7 @@ export interface AutomationFieldDiff {
   docType: string;
   expected: string | null;
   actual: string | null;
-  verdict: "MATCH" | "DIFFERS" | "GAP" | string;
+  verdict: "MATCH" | "DIFFERS" | "MISSING" | "EXTRA" | "INFO" | "GAP" | "XFORM" | string;
 }
 
 export type CheckStatus = "PASS" | "FAIL" | "SKIP" | "NA" | "ERROR";
@@ -528,6 +528,30 @@ export interface AutomationAiResponse {
   analysis: string;
 }
 
+// ---- Automation: raw HCL <-> Catalog single-document compare ----
+export type HclCompareType = "PRODUCT" | "VARIANT" | "SKU" | "PRICE" | "ENRICHED";
+
+export interface HclRawCompareRequest {
+  env: string;
+  productId: string;
+  type: HclCompareType;
+}
+
+export interface HclRawCompareResponse {
+  found: boolean;
+  message: string;
+  env: string;
+  productId: string;
+  type: string;
+  docType: string | null;
+  docId: string | null;
+  collection: string | null;
+  status: CheckStatus;
+  checked: number;
+  failed: number;
+  diffs: AutomationFieldDiff[];
+}
+
 // ---- Scenario Runner (Perf-only injection + verify) ----
 export type ScenarioKind = "STREAMING" | "BATCH";
 
@@ -552,6 +576,12 @@ export interface ScenarioSpec {
   defaultFileName: string | null;
   githubRepo: string | null;
   workflowFile: string | null;
+  verifyMode: string;
+  verifyTarget: string;
+  /** Full-load reconcile job: a COMPLETE feed upload is required (bundled sample is format-only). */
+  requiresFullFeed: boolean;
+  /** Whether opt-in pre-injection cleanup of the minimal golden data is supported. */
+  supportsCleanup: boolean;
 }
 
 export interface ScenarioGithubStatus {
@@ -612,6 +642,8 @@ export interface ScenarioRunRequest {
   version?: string;
   fileName?: string;
   fileBase64?: string;
+  /** Opt-in: delete the minimal golden data (Perf) before injecting so verify proves this run. */
+  cleanup?: boolean;
 }
 
 // ---- Schemas (Bulk Post) ----

@@ -21,6 +21,8 @@ import com.internal.tools.pubsubgui.scenario.model.ScenarioRunState;
 import com.internal.tools.pubsubgui.scenario.model.ScenarioSpec;
 import com.internal.tools.pubsubgui.scenario.model.VerifyMode;
 import com.mongodb.client.model.Filters;
+import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -52,6 +54,8 @@ public class ScenarioRunService {
     private static final Logger log = LoggerFactory.getLogger(ScenarioRunService.class);
     private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final int MAX_RETAINED_RUNS = 50;
+    /** Logical mongo db that catalog config collections live in (Product/Variant/SKU/Price/…). */
+    private static final String CONFIG_DB = "item-config";
 
     private final ScenarioCatalog catalog;
     private final ScenarioProperties props;
@@ -99,6 +103,14 @@ public class ScenarioRunService {
                 && (request.version() == null || request.version().isBlank())) {
             throw new IllegalArgumentException("A version is required to dispatch the batch workflow.");
         }
+        // Full-load reconciliation jobs inactivate/zero-out everything NOT in the uploaded file, so they
+        // must never run with the tiny bundled sample. Require a complete feed upload.
+        if (spec.requiresFullFeed()
+                && (request.fileBase64() == null || request.fileBase64().isBlank())) {
+            throw new IllegalArgumentException("'" + spec.shortName() + "' is a full-load reconciliation job: "
+                    + "it deactivates any record not present in the file. Upload the COMPLETE feed file — the "
+                    + "bundled sample is a format reference only and must not be injected.");
+        }
 
         String runId = UUID.randomUUID().toString();
         ScenarioRunState state = new ScenarioRunState(runId, spec, env);
@@ -129,6 +141,8 @@ public class ScenarioRunService {
         state.putInjection("target", "topic " + spec.topicId());
         state.putInjection("projectId", props.getProjectId());
 
+        cleanupIfRequested(spec, payload, req, state);
+
         RunPhase inject = state.addPhase("Injecting");
         state.startPhase(inject, "Publishing sample to " + spec.topicId());
         try {
@@ -142,9 +156,11 @@ public class ScenarioRunService {
             return;
         }
 
+        int waitSecs = effectiveWaitSeconds(spec, req);
         RunPhase wait = state.addPhase("Waiting");
-        state.startPhase(wait, "Letting the streaming job consume (" + props.getStreamWaitSeconds() + "s)");
-        sleep(props.getStreamWaitSeconds() * 1000L);
+        state.startPhase(wait, "Letting the streaming job consume (" + waitSecs + "s)"
+                + (waitSecs > props.getStreamWaitSeconds() ? " — extended for cleanup re-creation" : ""));
+        sleep(waitSecs * 1000L);
         state.finishPhase(wait, PhaseStatus.DONE, null);
 
         verifyAndComplete(spec, payload, state);
@@ -153,22 +169,31 @@ public class ScenarioRunService {
     // -------------------------------------------------------------------- batch
 
     private void runBatch(ScenarioSpec spec, ScenarioRunRequest req, ScenarioRunState state) {
-        byte[] content = decodeOrSample(req.fileBase64(), spec.sampleResource());
-        String fileName = firstNonBlank(req.fileName(), spec.defaultFileName());
-        String stamped = stampFileName(fileName);
-        String objectName = spec.gcsObjectPrefix() + stamped;
+        // Dispatch-only jobs (e.g. UniverseItemBundleBatchProcessor) derive their output from existing Mongo
+        // data and consume NO input file — skip the GCS upload entirely and go straight to workflow_dispatch.
+        String payload = "";
+        if (spec.dispatchOnly()) {
+            state.putInjection("mode", "dispatch-only (Mongo-derived — no file upload)");
+        } else {
+            byte[] content = decodeOrSample(req.fileBase64(), spec.sampleResource());
+            String fileName = firstNonBlank(req.fileName(), spec.defaultFileName());
+            String stamped = stampFileName(fileName);
+            String objectName = spec.gcsObjectPrefix() + stamped;
+            payload = new String(content, StandardCharsets.UTF_8);
 
-        RunPhase upload = state.addPhase("Uploading");
-        state.startPhase(upload, "Uploading to gs://" + spec.gcsBucket() + "/" + objectName);
-        String gsUri;
-        try {
-            gsUri = gcs.upload(state.getEnv(), spec.gcsBucket(), objectName, content, contentType(fileName));
-            state.putInjection("gcsUri", gsUri);
-            state.finishPhase(upload, PhaseStatus.DONE, gsUri);
-        } catch (Exception e) {
-            state.finishPhase(upload, PhaseStatus.FAILED, rootMessage(e));
-            state.complete("ERROR", "GCS upload failed: " + rootMessage(e));
-            return;
+            cleanupIfRequested(spec, payload, req, state);
+
+            RunPhase upload = state.addPhase("Uploading");
+            state.startPhase(upload, "Uploading to gs://" + spec.gcsBucket() + "/" + objectName);
+            try {
+                String gsUri = gcs.upload(state.getEnv(), spec.gcsBucket(), objectName, content, contentType(fileName));
+                state.putInjection("gcsUri", gsUri);
+                state.finishPhase(upload, PhaseStatus.DONE, gsUri);
+            } catch (Exception e) {
+                state.finishPhase(upload, PhaseStatus.FAILED, rootMessage(e));
+                state.complete("ERROR", "GCS upload failed: " + rootMessage(e));
+                return;
+            }
         }
 
         RunPhase trigger = state.addPhase("Triggering");
@@ -187,19 +212,25 @@ public class ScenarioRunService {
                 runIdGh = pollRun(repo, spec.workflowFile(), state, poll);
             } catch (Exception e) {
                 state.finishPhase(trigger, PhaseStatus.FAILED, rootMessage(e));
-                // File is uploaded; continue to verify (a scheduled run may still consume it).
+                // Continue to verify (a scheduled run may still produce the outcome).
             }
+        } else if (spec.dispatchOnly()) {
+            state.finishPhase(trigger, PhaseStatus.FAILED,
+                    "GitHub token not configured — this Mongo-derived batch can only run via workflow_dispatch.");
+            state.complete("ERROR", "GitHub token not configured; cannot dispatch " + spec.processor() + ".");
+            return;
         } else {
             state.finishPhase(trigger, PhaseStatus.SKIPPED,
                     "GitHub token not configured — file uploaded; batch run not dispatched.");
+            int waitSecs = effectiveWaitSeconds(spec, req);
             RunPhase wait = state.addPhase("Waiting");
-            state.startPhase(wait, "Waiting " + props.getStreamWaitSeconds() + "s before verify");
-            sleep(props.getStreamWaitSeconds() * 1000L);
+            state.startPhase(wait, "Waiting " + waitSecs + "s before verify"
+                    + (waitSecs > props.getStreamWaitSeconds() ? " (extended for cleanup re-creation)" : ""));
+            sleep(waitSecs * 1000L);
             state.finishPhase(wait, PhaseStatus.DONE, null);
         }
         state.putInjection("githubRunId", runIdGh);
 
-        String payload = new String(content, StandardCharsets.UTF_8);
         verifyAndComplete(spec, payload, state);
     }
 
@@ -245,9 +276,11 @@ public class ScenarioRunService {
         state.startPhase(verify, "Running read-only validators");
         RunSummary summary;
         try {
-            summary = spec.verifyMode() == VerifyMode.INVENTORY_PRESENCE
-                    ? verifyInventory(spec, payload, state)
-                    : verifyCatalog(spec, payload, state);
+            summary = switch (spec.verifyMode()) {
+                case INVENTORY_PRESENCE -> verifyInventory(spec, payload, state);
+                case CATALOG_PRESENCE -> verifyCatalogPresence(spec, payload, state);
+                default -> verifyCatalog(spec, payload, state);
+            };
         } catch (RuntimeException e) {
             state.finishPhase(verify, PhaseStatus.FAILED, rootMessage(e));
             state.complete("ERROR", "Verify failed: " + rootMessage(e));
@@ -287,10 +320,14 @@ public class ScenarioRunService {
 
     /** Read-only presence check of the injected ItemId in the inventory Mongo collections. */
     private RunSummary verifyInventory(ScenarioSpec spec, String payload, ScenarioRunState state) {
-        String itemId = deriveItemId(spec, payload);
+        String itemId = firstNonBlank(deriveItemId(spec, payload), spec.verifyFixedKey());
         String db = spec.verifyItemDb();
         boolean runtime = "inventory-runtime".equalsIgnoreCase(db);
-        String collection = runtime ? "Inventory" : "Item";
+        // Collection is explicit when set (e.g. full-feed writes config Inventory, not Item), else by db.
+        String collection = spec.verifyCollection() != null && !spec.verifyCollection().isBlank()
+                ? spec.verifyCollection()
+                : (runtime ? "Inventory" : "Item");
+        boolean skuKeyed = !"Item".equalsIgnoreCase(collection); // Inventory is keyed <sku>_<locationId>
         Instant start = Instant.now();
 
         CheckResult result;
@@ -299,12 +336,12 @@ public class ScenarioRunService {
         } else {
             state.putInjection("itemId", itemId);
             long count;
-            if (runtime) {
-                // runtime Inventory docs are keyed <sku>_<locationId>; match the sku prefix.
+            if (skuKeyed) {
+                // Inventory docs are keyed <sku>_<locationId>; match the sku prefix.
                 count = mongo.database(state.getEnv(), db).getCollection(collection)
                         .countDocuments(Filters.regex("_id", "^" + Pattern.quote(itemId)));
             } else {
-                // inventory-config Item docs are keyed by sku.
+                // Item docs are keyed by sku.
                 count = mongo.database(state.getEnv(), db).getCollection(collection)
                         .countDocuments(Filters.eq("_id", itemId));
             }
@@ -356,7 +393,27 @@ public class ScenarioRunService {
     private String deriveItemId(ScenarioSpec spec, String payload) {
         if (spec.kind() == ScenarioKind.STREAMING) {
             JsonNode node = tryParse(payload);
-            return node == null ? null : text(node, "ItemId");
+            if (node == null) {
+                return null;
+            }
+            String itemId = text(node, "ItemId");
+            if (itemId != null) {
+                return itemId;
+            }
+            // CDC change message: sku lives in fullDocument.sku (or the <sku>_<loc> documentId prefix).
+            JsonNode full = node.get("fullDocument");
+            if (full != null && !full.isNull()) {
+                String sku = text(full, "sku");
+                if (sku != null) {
+                    return sku;
+                }
+            }
+            String docId = text(node, "documentId");
+            if (docId != null) {
+                int us = docId.indexOf('_');
+                return us > 0 ? docId.substring(0, us) : docId;
+            }
+            return null;
         }
         // Batch: first non-header data row's first column (ITEMID).
         for (String line : payload.split("\\r?\\n")) {
@@ -368,6 +425,174 @@ public class ScenarioRunService {
             return cols.length > 0 ? cols[0].trim() : null;
         }
         return null;
+    }
+
+    /**
+     * Key for CATALOG_PRESENCE / cleanup: streaming reads {@code verifyKeyField} from the JSON (arrays use
+     * the first element); batch reads the {@code verifyKeyColumn} value from the first CSV data row.
+     */
+    private String catalogKey(ScenarioSpec spec, String payload) {
+        if (spec.kind() == ScenarioKind.STREAMING) {
+            JsonNode node = firstElement(tryParse(payload));
+            if (node == null || spec.verifyKeyField() == null) {
+                return null;
+            }
+            return text(node, spec.verifyKeyField());
+        }
+        String column = spec.verifyKeyColumn();
+        if (column == null || column.isBlank()) {
+            return null;
+        }
+        String[] lines = payload.split("\\r?\\n");
+        if (lines.length < 2) {
+            return null;
+        }
+        String[] header = lines[0].split(",");
+        int idx = -1;
+        for (int i = 0; i < header.length; i++) {
+            if (header[i].trim().equalsIgnoreCase(column)) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx < 0) {
+            return null;
+        }
+        for (int i = 1; i < lines.length; i++) {
+            if (lines[i].isBlank()) {
+                continue;
+            }
+            String[] cols = lines[i].split(",");
+            return idx < cols.length ? cols[idx].trim() : null;
+        }
+        return null;
+    }
+
+    private static JsonNode firstElement(JsonNode node) {
+        if (node == null) {
+            return null;
+        }
+        if (node.isArray()) {
+            return node.isEmpty() ? null : node.get(0);
+        }
+        return node;
+    }
+
+    // ------------------------------------------------------------------ presence
+
+    /** Read-only presence (and optional field assertion) of the injected key in an item-config collection. */
+    private RunSummary verifyCatalogPresence(ScenarioSpec spec, String payload, ScenarioRunState state) {
+        String key = firstNonBlank(catalogKey(spec, payload), spec.verifyFixedKey());
+        String collection = spec.verifyCollection();
+        String matchField = spec.verifyMatchField() == null || spec.verifyMatchField().isBlank()
+                ? "_id" : spec.verifyMatchField();
+        Instant start = Instant.now();
+
+        CheckResult result;
+        if (key == null || key.isBlank()) {
+            result = CheckResult.skip(spec.id(), "Could not derive a key from the injected sample.");
+        } else {
+            state.putInjection("verifyKey", key);
+            Document doc = mongo.database(state.getEnv(), CONFIG_DB).getCollection(collection)
+                    .find(Filters.eq(matchField, key)).first();
+            if (doc == null) {
+                result = CheckResult.fail(spec.id(), 0, 1,
+                        "No " + collection + " document found for " + matchField + "=" + key + ".",
+                        "A " + collection + " doc where " + matchField + "=" + key, "none found", List.of(key));
+            } else if (spec.verifyAssertField() != null && !spec.verifyAssertField().isBlank()) {
+                String actual = doc.get(spec.verifyAssertField()) == null
+                        ? null : String.valueOf(doc.get(spec.verifyAssertField()));
+                if (actual != null && actual.equalsIgnoreCase(spec.verifyAssertValue())) {
+                    result = CheckResult.pass(spec.id(), 1, collection + " " + key + " has "
+                            + spec.verifyAssertField() + "=" + actual + ".");
+                } else {
+                    result = CheckResult.fail(spec.id(), 0, 1,
+                            collection + " " + key + " " + spec.verifyAssertField() + " was '" + actual + "'.",
+                            spec.verifyAssertField() + "=" + spec.verifyAssertValue(),
+                            spec.verifyAssertField() + "=" + actual, List.of(key));
+                }
+            } else {
+                result = CheckResult.pass(spec.id(), 1,
+                        "Found " + collection + " document for " + matchField + "=" + key + ".");
+            }
+        }
+
+        ScenarioDef def = new ScenarioDef(spec.id(), ScenarioGroup.CROSS_PROCESSOR, spec.category().label(),
+                spec.shortName() + " presence", "P1", Feasibility.READONLY,
+                "Presence check of the injected key in item-config." + collection, spec.description());
+        Instant end = Instant.now();
+        int p = result.status().name().equals("PASS") ? 1 : 0;
+        int f = result.status().name().equals("FAIL") ? 1 : 0;
+        int s = result.status().name().equals("SKIP") ? 1 : 0;
+        return new RunSummary(state.getEnv(), key, 1,
+                DateTimeFormatter.ISO_INSTANT.format(start), DateTimeFormatter.ISO_INSTANT.format(end),
+                Duration.between(start, end).toMillis(), 1, p, f, s, 0, 0,
+                List.of(new ScenarioResult(def, result)));
+    }
+
+    // ------------------------------------------------------------------- cleanup
+
+    /**
+     * Opt-in, Perf-only pre-injection cleanup: delete just the scenario's minimal golden data (by its key)
+     * from the target collections so the presence verify proves THIS run wrote it. No-op unless the user
+     * ticked cleanup and the scenario declares {@code cleanupCollections}.
+     */
+    private void cleanupIfRequested(ScenarioSpec spec, String payload, ScenarioRunRequest req,
+                                    ScenarioRunState state) {
+        if (req == null || !req.cleanup()) {
+            return;
+        }
+        RunPhase phase = state.addPhase("Cleaning");
+        if (!spec.supportsCleanup()) {
+            state.finishPhase(phase, PhaseStatus.SKIPPED, "Cleanup is not supported for this scenario.");
+            return;
+        }
+        String key = deriveKey(spec, payload);
+        if (key == null || key.isBlank()) {
+            state.finishPhase(phase, PhaseStatus.SKIPPED, "Could not derive a key to clean.");
+            return;
+        }
+        String db = cleanupDb(spec);
+        state.startPhase(phase, "Deleting golden data for " + key + " in " + db);
+        long total = 0;
+        StringBuilder detail = new StringBuilder();
+        try {
+            for (String raw : spec.cleanupCollections().split(",")) {
+                String collection = raw.trim();
+                if (collection.isEmpty()) {
+                    continue;
+                }
+                long deleted = mongo.database(state.getEnv(), db).getCollection(collection)
+                        .deleteMany(cleanupFilter(collection, key)).getDeletedCount();
+                total += deleted;
+                detail.append(collection).append('=').append(deleted).append("  ");
+            }
+        } catch (RuntimeException e) {
+            state.finishPhase(phase, PhaseStatus.FAILED, "Cleanup error: " + rootMessage(e));
+            return;
+        }
+        state.putInjection("cleanupDeleted", total);
+        state.finishPhase(phase, PhaseStatus.DONE, "Deleted " + total + " doc(s): " + detail.toString().trim());
+    }
+
+    private String deriveKey(ScenarioSpec spec, String payload) {
+        return switch (spec.verifyMode()) {
+            case INVENTORY_PRESENCE -> deriveItemId(spec, payload);
+            case CATALOG_PRESENCE -> catalogKey(spec, payload);
+            default -> deriveProductId(spec, payload);
+        };
+    }
+
+    private String cleanupDb(ScenarioSpec spec) {
+        return spec.verifyMode() == VerifyMode.INVENTORY_PRESENCE ? spec.verifyItemDb() : CONFIG_DB;
+    }
+
+    private Bson cleanupFilter(String collection, String key) {
+        // Inventory docs are keyed <sku>_<locationId>; everything else keys by _id or carries productId.
+        if ("Inventory".equalsIgnoreCase(collection)) {
+            return Filters.regex("_id", "^" + Pattern.quote(key));
+        }
+        return Filters.or(Filters.eq("_id", key), Filters.eq("productId", key));
     }
 
     // ------------------------------------------------------------------- helpers
@@ -440,6 +665,16 @@ public class ScenarioRunService {
 
     private static String firstNonBlank(String a, String b) {
         return a != null && !a.isBlank() ? a : b;
+    }
+
+    /**
+     * Verify wait window. When the run performed opt-in cleanup, the injected data was deleted first and must
+     * be re-created by the job before verification, so extend the wait by {@code cleanupWaitSeconds}.
+     */
+    private int effectiveWaitSeconds(ScenarioSpec spec, ScenarioRunRequest req) {
+        int base = props.getStreamWaitSeconds();
+        boolean cleaned = req != null && req.cleanup() && spec.supportsCleanup();
+        return cleaned ? base + Math.max(0, props.getCleanupWaitSeconds()) : base;
     }
 
     private static void sleep(long ms) {

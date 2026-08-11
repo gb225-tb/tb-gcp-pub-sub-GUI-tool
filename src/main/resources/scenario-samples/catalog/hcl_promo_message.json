@@ -1,0 +1,16 @@
+[
+  {
+    "catEntryId": 660100,
+    "partNumber": "TMW_100L_15",
+    "catEntryTypeId": "VariantBean",
+    "attributes": {
+      "PROMO_CONDITION": "and",
+      "PROMO_START_DATE": "01/05/2026",
+      "PROMO_END_DATE": "30/06/2026",
+      "PROMO_PGP_DISPLAY": "1",
+      "PROMO_TEXT_SHORT": "Golden-thread promo (QA scenario)",
+      "PROMO_TEXT_LONG": "Golden-thread promo message for the TMW_100L family used by the QA Scenario Runner.",
+      "PROMO_URL_SHORT": "https://www.tailoredbrands.com"
+    }
+  }
+]

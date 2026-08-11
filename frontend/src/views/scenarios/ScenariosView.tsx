@@ -10,7 +10,10 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
+import Alert from "@mui/material/Alert";
+import Checkbox from "@mui/material/Checkbox";
 import FormControl from "@mui/material/FormControl";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import InputLabel from "@mui/material/InputLabel";
 import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
@@ -150,6 +153,7 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
   const [version, setVersion] = useState<string>("");
   const [file, setFile] = useState<{ name: string; base64: string } | null>(null);
   const [defaultFileName, setDefaultFileName] = useState<string>("");
+  const [cleanup, setCleanup] = useState<boolean>(false);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [running, setRunning] = useState(false);
@@ -217,6 +221,7 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
   useEffect(() => {
     if (!spec) return;
     setFile(null);
+    setCleanup(false);
     void (async () => {
       try {
         const s = await api<ScenarioSample>(`/api/scenario/sample/${spec.id}`);
@@ -248,9 +253,10 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
   const canRun = useMemo(() => {
     if (!spec || !spec.enabled || running) return false;
     if (spec.kind === "STREAMING") return payload.trim().length > 0;
-    // batch
+    // batch: full-load reconcilers must have a COMPLETE feed uploaded (bundled sample is format-only).
+    if (spec.requiresFullFeed && !file) return false;
     return version.trim().length > 0 && githubConfigured;
-  }, [spec, running, payload, version, githubConfigured]);
+  }, [spec, running, payload, version, githubConfigured, file]);
 
   const stopPolling = () => {
     if (pollRef.current) {
@@ -273,6 +279,7 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
         version: spec.kind === "BATCH" ? version.trim() : undefined,
         fileName: spec.kind === "BATCH" ? file?.name || defaultFileName : undefined,
         fileBase64: spec.kind === "BATCH" ? file?.base64 : undefined,
+        cleanup: spec.supportsCleanup ? cleanup : undefined,
       };
       const initial = await api<ScenarioRunState>("/api/scenario/run", { method: "POST", body });
       setRun(initial);
@@ -294,7 +301,7 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
       toast((e as Error).message, "error", "Run failed to start");
       setRunning(false);
     }
-  }, [spec, perfEnv, payload, version, file, defaultFileName, toast]);
+  }, [spec, perfEnv, payload, version, file, defaultFileName, cleanup, toast]);
 
   const onPickFile = async (f: File | null) => {
     if (!f) return;
@@ -349,6 +356,7 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
     setAnalysis("");
     setVersion("");
     setFile(null);
+    setCleanup(false);
     setRunning(false);
   };
 
@@ -403,14 +411,22 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
             </Select>
           </FormControl>
 
-          <FormControl size="small" sx={{ minWidth: 240 }}>
+          <FormControl size="small" sx={{ minWidth: 240, maxWidth: 300 }}>
             <InputLabel>Scenario</InputLabel>
-            <Select label="Scenario" value={scenarioId} onChange={(e) => setScenarioId(String(e.target.value))}>
+            <Select
+              label="Scenario"
+              value={scenarioId}
+              onChange={(e) => setScenarioId(String(e.target.value))}
+              renderValue={() => spec?.shortName ?? ""}
+              MenuProps={{ PaperProps: { sx: { maxWidth: 340, maxHeight: 420 } } }}
+            >
               {scenariosInCategory.map((s) => (
                 <MenuItem key={s.id} value={s.id} disabled={!s.enabled}>
                   <ListItemText
                     primary={s.shortName}
                     secondary={s.kind === "BATCH" ? "Batch · upload + dispatch" : "Streaming · publish"}
+                    primaryTypographyProps={{ noWrap: true, fontWeight: 600 }}
+                    secondaryTypographyProps={{ noWrap: true, variant: "caption" }}
                   />
                 </MenuItem>
               ))}
@@ -468,9 +484,34 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
           <Collapse in={inputOpen} unmountOnExit>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 1 }}>{spec.description}</Typography>
             <Box sx={{ p: 1, borderRadius: 1.5, bgcolor: "grey.50", border: "1px solid", borderColor: "divider" }}>
-              <Typography variant="caption" sx={{ fontWeight: 800 }}>Target </Typography>
-              <Typography variant="caption" component="span" sx={{ fontFamily: "monospace" }}>{spec.target}</Typography>
+              <Box>
+                <Typography variant="caption" sx={{ fontWeight: 800 }}>Target </Typography>
+                <Typography variant="caption" component="span" sx={{ fontFamily: "monospace" }}>{spec.target}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" sx={{ fontWeight: 800 }}>Verify </Typography>
+                <Typography variant="caption" component="span" sx={{ fontFamily: "monospace" }}>{spec.verifyTarget}</Typography>
+              </Box>
             </Box>
+
+            {spec.requiresFullFeed && (
+              <Alert severity="warning" sx={{ mt: 1.5 }}>
+                <b>Full-load reconciliation job.</b> It deactivates any record <b>not</b> present in the file, so
+                the bundled sample is a <b>format reference only</b>. Upload the <b>complete</b> feed file to run.
+              </Alert>
+            )}
+
+            {spec.supportsCleanup && (
+              <FormControlLabel
+                sx={{ mt: 0.5 }}
+                control={<Checkbox size="small" checked={cleanup} onChange={(e) => setCleanup(e.target.checked)} sx={{ color: ACCENT, "&.Mui-checked": { color: ACCENT } }} />}
+                label={
+                  <Typography variant="caption" color="text.secondary">
+                    Clean up this scenario&apos;s golden data before injecting (so verify proves this run wrote it)
+                  </Typography>
+                }
+              />
+            )}
 
             {spec.kind === "STREAMING" ? (
               <>
@@ -490,6 +531,12 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
                   </Box>
                 )}
               </>
+            ) : !spec.gcsBucket ? (
+              <Alert severity="info" sx={{ mt: 1.5 }}>
+                <b>Mongo-derived batch — no file to upload.</b> This job derives its output from existing
+                data and only needs a <b>version</b>. Running dispatches <code>{spec.workflowFile}</code> with
+                processor <code>{spec.processor}</code>, then polls the run to completion.
+              </Alert>
             ) : (
               <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mt: 1.5 }} flexWrap="wrap" useFlexGap>
                 <Button variant="outlined" component="label" startIcon={<UploadFileIcon />}>
@@ -501,8 +548,12 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
                     onChange={(e) => void onPickFile(e.target.files?.[0] ?? null)}
                   />
                 </Button>
-                <Typography variant="body2" color="text.secondary">
-                  {file ? file.name : `Using bundled sample (${defaultFileName})`}
+                <Typography variant="body2" color={spec.requiresFullFeed && !file ? "error" : "text.secondary"}>
+                  {file
+                    ? file.name
+                    : spec.requiresFullFeed
+                      ? "Upload the complete feed file to run (required)"
+                      : `Using bundled sample (${defaultFileName})`}
                 </Typography>
               </Stack>
             )}
@@ -648,6 +699,12 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
           <DialogContentText component="div">
             {spec?.kind === "STREAMING" ? (
               <>Publish the edited message to <b>{spec?.topicId}</b> (project {catalog?.projectId}).</>
+            ) : !spec?.gcsBucket ? (
+              <>
+                Dispatch <b>{spec?.workflowFile}</b> ({spec?.githubRepo}) with processor <b>{spec?.processor}</b>,
+                {" "}environment <b>perf</b>, version <b>{version}</b>. This is a <b>Mongo-derived</b> batch — no file
+                is uploaded; it derives its output from existing data.
+              </>
             ) : (
               <>
                 Upload <b>{file?.name || defaultFileName}</b> to <b>gs://{spec?.gcsBucket}/{spec?.gcsObjectPrefix}</b>

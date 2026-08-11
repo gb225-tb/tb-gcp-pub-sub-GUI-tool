@@ -1,0 +1,15 @@
+{
+  "from_Class": "TMW_100L",
+  "associations": [
+    {
+      "associationType": "FIT",
+      "from_ProductCode": "TMW_100L_15",
+      "from_Class": "TMW_100L",
+      "from_Color": "15",
+      "to_ProductCode": "TMW_100M_15",
+      "to_Class": "TMW_100M",
+      "to_Color": "15",
+      "_DeltaStatus": "NEW"
+    }
+  ]
+}

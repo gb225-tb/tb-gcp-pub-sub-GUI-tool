@@ -17,6 +17,8 @@ public class ScenarioProperties {
     private boolean enforcePerfOnly = true;
     private String projectId = "np-ecom-2-6d1a";
     private int streamWaitSeconds = 5;
+    /** Extra seconds added to the verify wait when the run performed opt-in cleanup (data must be re-created). */
+    private int cleanupWaitSeconds = 10;
     private int batchTimeoutSeconds = 420;
     private int batchPollSeconds = 15;
 
@@ -42,6 +44,14 @@ public class ScenarioProperties {
 
     public void setStreamWaitSeconds(int streamWaitSeconds) {
         this.streamWaitSeconds = streamWaitSeconds;
+    }
+
+    public int getCleanupWaitSeconds() {
+        return cleanupWaitSeconds;
+    }
+
+    public void setCleanupWaitSeconds(int cleanupWaitSeconds) {
+        this.cleanupWaitSeconds = cleanupWaitSeconds;
     }
 
     public int getBatchTimeoutSeconds() {

@@ -1,0 +1,2 @@
+PartNumber,AttributeIdentifier,ValueIdentifier,LanguageId,Value,Usage,Sequence,Field1,Field2,Field3,Delete,isBestSeller
+TMW_100L,BestSeller,1.0,-1,,Descriptive,9,,,,0,True

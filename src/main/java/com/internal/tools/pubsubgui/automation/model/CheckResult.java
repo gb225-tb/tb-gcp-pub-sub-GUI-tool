@@ -65,4 +65,22 @@ public record CheckResult(
         CheckStatus status = differs == 0 ? CheckStatus.PASS : CheckStatus.FAIL;
         return new CheckResult(scenarioId, status, checked, differs, message, null, null, List.of(), safe);
     }
+
+    /**
+     * Diff result where only the given verdicts count as failures. Used by the type-wise HCL cross-verify so
+     * that streaming-only "extra" fields (populated by other feeds, not the HCL migration) are shown as
+     * informational rather than failing the check.
+     */
+    public static CheckResult diffGraded(String scenarioId, int checked, List<FieldDiff> diffs, String message,
+                                         java.util.Set<String> failingVerdicts) {
+        int failed = 0;
+        List<FieldDiff> safe = diffs == null ? new ArrayList<>() : diffs;
+        for (FieldDiff d : safe) {
+            if (failingVerdicts.contains(d.verdict())) {
+                failed++;
+            }
+        }
+        CheckStatus status = failed == 0 ? CheckStatus.PASS : CheckStatus.FAIL;
+        return new CheckResult(scenarioId, status, checked, failed, message, null, null, List.of(), safe);
+    }
 }

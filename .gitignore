@@ -24,6 +24,9 @@ src/main/resources/static/index.html
 ### OS ###
 .DS_Store
 
+### Large local automation input dumps (production feed extracts; not for VCS) ###
+automation/
+
 ### Credentials (never commit) ###
 *-key.json
 *-credentials.json

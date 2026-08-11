@@ -1,0 +1,29 @@
+{
+  "source": "native-change-stream",
+  "operationType": "insert",
+  "collection": "Inventory",
+  "documentId": "TMW5B7U75372_2706",
+  "ns": {
+    "db": "fs-ctlg-inventory-config-perf",
+    "coll": "Inventory"
+  },
+  "fullDocument": {
+    "_id": "TMW5B7U75372_2706",
+    "banner": "TMW",
+    "createdBy": "InventoryFullFeedIngestionProcessor",
+    "distributionCentersQuantity": 0,
+    "inventoryStatus": "LIMITED_STOCK",
+    "inventoryStatusCode": 1,
+    "locationId": "2706",
+    "productId": "TMW_5B7U",
+    "quantity": 2,
+    "sku": "TMW5B7U75372",
+    "division": "10",
+    "status": "active",
+    "storeQuantity": 2,
+    "totalIncludingSubstituteItems": 2,
+    "transactionTimestamp": "2026-01-28T06:33:50.966",
+    "variantId": "TMW_5B7U_75"
+  },
+  "timestamp": "2026-01-28T06:34:00.000Z"
+}

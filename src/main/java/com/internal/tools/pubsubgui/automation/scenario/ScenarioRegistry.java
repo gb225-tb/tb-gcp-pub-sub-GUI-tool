@@ -101,17 +101,17 @@ public class ScenarioRegistry {
         add("XF-PRODUCT", ScenarioGroup.HCL_XFORM, "Xform", "Product fields: HCL vs streaming",
                 "P1", "Product-level field comparison against the HCL migration output.",
                 HclCrossVerifier.product());
-        add("XF-VARIANT", ScenarioGroup.HCL_XFORM, "Xform", "Variant count: HCL vs streaming",
-                "P1", "Active Variant count comparison against the HCL migration output.",
+        add("XF-VARIANT", ScenarioGroup.HCL_XFORM, "Xform", "Variant fields: HCL vs streaming",
+                "P1", "Per-Variant field-by-field comparison against the HCL migration output.",
                 HclCrossVerifier.variant());
-        add("XF-SKU", ScenarioGroup.HCL_XFORM, "Xform", "SKU count: HCL vs streaming",
-                "P1", "Active SKU count comparison against the HCL migration output.",
+        add("XF-SKU", ScenarioGroup.HCL_XFORM, "Xform", "SKU fields: HCL vs streaming",
+                "P1", "Per-SKU field-by-field comparison against the HCL migration output.",
                 HclCrossVerifier.sku());
-        add("XF-PRICE", ScenarioGroup.HCL_XFORM, "Xform", "Price count: HCL vs streaming",
-                "P1", "Active Price count comparison against the HCL migration output.",
+        add("XF-PRICE", ScenarioGroup.HCL_XFORM, "Xform", "Price fields: HCL vs streaming",
+                "P1", "Per-Price field-by-field comparison against the HCL migration output.",
                 HclCrossVerifier.price());
-        add("XF-ENRICHED", ScenarioGroup.HCL_XFORM, "Xform", "EnrichedProduct count: HCL vs streaming",
-                "P2", "Publish-ready EnrichedProduct count comparison against the HCL migration output.",
+        add("XF-ENRICHED", ScenarioGroup.HCL_XFORM, "Xform", "EnrichedProduct fields: HCL vs streaming",
+                "P2", "Per-EnrichedProduct field-by-field comparison against the HCL migration output.",
                 HclCrossVerifier.enriched());
     }
 
@@ -207,14 +207,15 @@ public class ScenarioRegistry {
         // HCL vs streaming (Xform_* / HCL_vs_Streaming_Diffs)
         SPEC.put("XF-PRODUCT", "Xform_Product / HCL_vs_Streaming_Diffs → compare the Product document the HCL "
                 + "migration would build against the streaming Product doc, field by field.");
-        SPEC.put("XF-VARIANT", "Xform_Variant → compare the active Variant count the HCL migration would build against "
-                + "the streaming Variant docs for the product.");
-        SPEC.put("XF-SKU", "Xform_SKU → compare the active SKU count the HCL migration would build against the "
-                + "streaming SKU docs for the product.");
-        SPEC.put("XF-PRICE", "Xform_Price → compare the active Price count the HCL migration would build against the "
-                + "streaming Price docs for the product.");
-        SPEC.put("XF-ENRICHED", "Xform_EnrichedProduct → compare the publish-ready EnrichedProduct count the HCL "
-                + "migration would build against the streaming EnrichedProduct docs for the product.");
+        SPEC.put("XF-VARIANT", "Xform_Variant → for each Variant the HCL migration would build, compare every field "
+                + "against the streaming Variant doc (paired by _id). MISSING = HCL value not migrated; EXTRA = "
+                + "streaming-only field (other feeds); DIFFERS = value mismatch.");
+        SPEC.put("XF-SKU", "Xform_SKU → for each SKU the HCL migration would build, compare every field against the "
+                + "streaming SKU doc (paired by _id).");
+        SPEC.put("XF-PRICE", "Xform_Price → for each Price the HCL migration would build, compare every field "
+                + "(listPrice/salePrice/promoPrice/status/...) against the streaming Price doc (paired by _id).");
+        SPEC.put("XF-ENRICHED", "Xform_EnrichedProduct → for each publish-ready EnrichedProduct the HCL migration "
+                + "would build, compare every field against the streaming EnrichedProduct doc (paired by _id).");
     }
 
     public List<Entry> all() {

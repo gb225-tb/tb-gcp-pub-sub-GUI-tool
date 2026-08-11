@@ -216,6 +216,176 @@ public class HclBuildService {
     }
 
     /**
+     * Reads the <b>raw</b> HCL DB2 record for a product subtree (no migration transforms applied) and returns
+     * it keyed by the equivalent streaming Config field names, so the raw source can be compared directly,
+     * field-by-field, against what the replatform streaming pipeline stored. Untransformed on purpose: any
+     * difference vs the streaming doc reflects a real transformation (or a defect).
+     */
+    public Map<String, Object> rawForProductId(String envName, String partNumber) {
+        HclProperties.Environment env = properties.environment(envName);
+        if (Objects.isNull(env)) {
+            throw new IllegalArgumentException("Unknown HCL environment: " + envName);
+        }
+        if (Objects.isNull(partNumber) || partNumber.isBlank()) {
+            throw new IllegalArgumentException("productId (part number) is required");
+        }
+        String trimmed = partNumber.trim();
+        DriverManager.setLoginTimeout(LOGIN_TIMEOUT_SECONDS);
+        Db2ProductReader reader = reader(env);
+        try (Connection connection = reader.openConnection()) {
+            Long catEntryId = reader.resolveProductCatEntryId(connection, trimmed);
+            if (Objects.isNull(catEntryId)) {
+                return notFound(envName, trimmed, "No ProductBean found for part number '" + trimmed + "'");
+            }
+            ProductBundle bundle = reader.fetchProduct(connection, catEntryId);
+            String productId = bundle.partNumber(catEntryId);
+            if (Objects.isNull(productId) || Objects.isNull(bundle.details(catEntryId))) {
+                return notFound(envName, trimmed, "Product " + catEntryId + " has no part number / details in HCL");
+            }
+            return assembleRaw(envName, trimmed, catEntryId, bundle);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("HCL raw read failed for '" + trimmed + "': " + rootMessage(e), e);
+        }
+    }
+
+    private Map<String, Object> assembleRaw(String envName, String partNumber, Long catEntryId,
+                                            ProductBundle bundle) {
+        String productId = bundle.partNumber(catEntryId);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("env", envName);
+        out.put("productId", partNumber);
+        out.put("catEntryId", catEntryId);
+        out.put("found", true);
+        out.put("product", rawProduct(bundle, catEntryId, productId));
+
+        List<Map<String, Object>> variantOut = new ArrayList<>();
+        for (Map.Entry<Long, List<Long>> entry : bundle.getSkuCatEntryIdsByVariantCatEntryId().entrySet()) {
+            Long variantCatEntryId = entry.getKey();
+            String variantId = bundle.partNumber(variantCatEntryId);
+            if (Objects.isNull(variantId) || Objects.isNull(bundle.details(variantCatEntryId))) {
+                continue;
+            }
+            Map<String, Object> variant = new LinkedHashMap<>();
+            variant.put("_id", variantId);
+            variant.put("variant", rawVariant(bundle, variantCatEntryId, productId, variantId));
+            variant.put("enrichedProduct", rawEnriched(bundle, variantCatEntryId, productId, variantId));
+
+            List<Map<String, Object>> skuOut = new ArrayList<>();
+            for (Long skuCatEntryId : entry.getValue()) {
+                String skuId = bundle.partNumber(skuCatEntryId);
+                if (Objects.isNull(skuId) || Objects.isNull(bundle.details(skuCatEntryId))) {
+                    continue;
+                }
+                Map<String, Object> skuNode = new LinkedHashMap<>();
+                skuNode.put("_id", skuId);
+                skuNode.put("sku", rawSku(bundle, skuCatEntryId, productId, variantId, skuId));
+                skuNode.put("price", rawPrice(bundle, skuCatEntryId, productId, variantId, skuId));
+                skuOut.add(skuNode);
+            }
+            variant.put("skus", skuOut);
+            variantOut.add(variant);
+        }
+        out.put("variants", variantOut);
+        return out;
+    }
+
+    private static Map<String, Object> rawProduct(ProductBundle bundle, Long id, String productId) {
+        ProductBundle.CatalogEntry d = bundle.details(id);
+        List<ProductBundle.AttributeValue> attrs = bundle.getAttributesByCatEntryId().get(id);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("_id", productId);
+        m.put("productId", productId);
+        m.put("productName", d.getName());
+        m.put("productDescription", d.getLongDescription());
+        m.put("division", attrVal(attrs, "Division"));
+        m.put("divisionDescription", attrDesc(attrs, "Division"));
+        m.put("fabric", attrDesc(attrs, "Fabric"));
+        m.put("pattern", attrDesc(attrs, "Pattern"));
+        m.put("careInstructions", attrDesc(attrs, "CareInstructions"));
+        m.put("seoUrl", bundle.getSeoUrlByCatEntryId().get(id));
+        return m;
+    }
+
+    private static Map<String, Object> rawVariant(ProductBundle bundle, Long id, String productId, String variantId) {
+        List<ProductBundle.AttributeValue> attrs = bundle.getAttributesByCatEntryId().get(id);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("_id", variantId);
+        m.put("productId", productId);
+        m.put("variantId", variantId);
+        m.put("fabric", attrDesc(attrs, "Fabric"));
+        m.put("pattern", attrDesc(attrs, "Pattern"));
+        m.put("careInstructions", attrDesc(attrs, "CareInstructions"));
+        return m;
+    }
+
+    private static Map<String, Object> rawEnriched(ProductBundle bundle, Long id, String productId, String variantId) {
+        ProductBundle.CatalogEntry d = bundle.details(id);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("_id", variantId);
+        m.put("productId", productId);
+        m.put("variantId", variantId);
+        m.put("productName", d.getName());
+        m.put("productDescription", d.getLongDescription());
+        m.put("mainImage", d.getThumbnail());
+        m.put("altImage", d.getFullImage());
+        m.put("seoUrl", bundle.getSeoUrlByCatEntryId().get(id));
+        return m;
+    }
+
+    private static Map<String, Object> rawSku(ProductBundle bundle, Long id, String productId, String variantId,
+                                              String skuId) {
+        ProductBundle.CatalogEntry d = bundle.details(id);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("_id", skuId);
+        m.put("productId", productId);
+        m.put("variantId", variantId);
+        m.put("sku", skuId);
+        m.put("upc", d.getMfPartNumber());
+        m.put("taxCode", d.getTaxCode());
+        return m;
+    }
+
+    private static Map<String, Object> rawPrice(ProductBundle bundle, Long id, String productId, String variantId,
+                                                String skuId) {
+        ProductBundle.Price p = bundle.getPriceByCatEntryId().get(id);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("_id", skuId);
+        m.put("productId", productId);
+        m.put("variantId", variantId);
+        m.put("sku", skuId);
+        m.put("listPrice", p == null ? null : p.getListPrice());
+        m.put("salePrice", p == null ? null : p.getSalePrice());
+        m.put("promoPrice", p == null ? null : p.getPromoPrice());
+        return m;
+    }
+
+    private static String attrDesc(List<ProductBundle.AttributeValue> attrs, String name) {
+        if (Objects.isNull(attrs)) {
+            return null;
+        }
+        for (ProductBundle.AttributeValue a : attrs) {
+            if (name.equals(a.getAttributeName())) {
+                return a.getValueFromDesc();
+            }
+        }
+        return null;
+    }
+
+    private static String attrVal(List<ProductBundle.AttributeValue> attrs, String name) {
+        if (Objects.isNull(attrs)) {
+            return null;
+        }
+        for (ProductBundle.AttributeValue a : attrs) {
+            if (name.equals(a.getAttributeName())) {
+                return a.getValueFromVal();
+            }
+        }
+        return null;
+    }
+
+    /**
      * Port of {@code ProductFanoutFn.processElement} — buffers each variant subtree so child dates/status
      * roll up into the parent, applies the publish gate, mirrors SKU status onto Price/Item, then returns
      * the assembled documents (normalized for JSON). No documents are written anywhere.

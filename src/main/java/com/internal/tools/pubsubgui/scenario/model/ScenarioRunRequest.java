@@ -11,6 +11,8 @@ package com.internal.tools.pubsubgui.scenario.model;
  * @param version         batch: version input for the workflow dispatch (required for batch)
  * @param fileName        batch: uploaded file name (falls back to the spec default)
  * @param fileBase64      batch: uploaded file content, base64 (falls back to the bundled sample)
+ * @param cleanup         opt-in: when true and the scenario supports it, delete the minimal golden data
+ *                        (Perf only, by the scenario key) BEFORE injecting so the verify proves this run
  */
 public record ScenarioRunRequest(
         String env,
@@ -18,5 +20,6 @@ public record ScenarioRunRequest(
         String payloadOverride,
         String version,
         String fileName,
-        String fileBase64) {
+        String fileBase64,
+        boolean cleanup) {
 }

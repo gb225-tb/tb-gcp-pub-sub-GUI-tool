@@ -8,6 +8,7 @@ package com.internal.tools.pubsubgui.scenario.model;
 public enum ScenarioCategory {
     CATALOG_STREAMING("Catalog · Streaming"),
     CATALOG_BATCH("Catalog · Batch"),
+    CATALOG_BUNDLES("Catalog · Bundles"),
     INVENTORY_STREAMING("Inventory · Streaming"),
     INVENTORY_BATCH("Inventory · Batch");
 

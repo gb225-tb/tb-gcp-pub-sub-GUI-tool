@@ -1,0 +1,23 @@
+[
+  {
+    "productId": "TMW_100L_15",
+    "productFinishedDate": "2026-02-03",
+    "lastProductCopyUpdatedDate": "2026-02-25 14:30:10",
+    "workspace": "The Men's Wearhouse",
+    "brand": "TMW",
+    "uvBrand": "CALVIN KLEIN",
+    "category": "NESTED SUIT",
+    "uvPattern": "SOLID",
+    "uvColorDesc": "BLUE SHARKSKIN",
+    "shortDescription": "CHILLFLEX Slim Fit Premium Wool Blend Sport Coat",
+    "longDescription": "Golden-thread enriched product for the TMW_100L family used by the QA Scenario Runner.",
+    "materialBreakdown": "100% Wool",
+    "styleForBullet": "Two-Button Jacket, Notch Lapel, Side Vents, Fully Lined, Slim Fit",
+    "defaultColor": "N",
+    "onlineExclusive": "N",
+    "eComPublishedDate": "2026-02-07",
+    "uvBigAndTallFlag": "0",
+    "uvStyleCode": "TMW_100L",
+    "isBundle": "0"
+  }
+]

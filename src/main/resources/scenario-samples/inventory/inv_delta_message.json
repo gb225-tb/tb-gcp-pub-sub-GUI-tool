@@ -1,0 +1,10 @@
+{
+  "ItemId": "TMW5B7U75372",
+  "LocationId": "2706",
+  "Status": "AVAILABLE",
+  "StatusCode": 2,
+  "Quantity": 5,
+  "TransactionDateTime": "2026-01-28T07:15:10.220",
+  "TotalIncludingSubstituteItems": 5,
+  "SubstituteItemsAvailable": false
+}

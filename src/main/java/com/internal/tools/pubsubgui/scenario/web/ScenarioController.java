@@ -75,6 +75,10 @@ public class ScenarioController {
             m.put("defaultFileName", s.defaultFileName());
             m.put("githubRepo", s.githubRepo());
             m.put("workflowFile", s.workflowFile());
+            m.put("verifyMode", s.verifyMode().name());
+            m.put("verifyTarget", verifyTarget(s));
+            m.put("requiresFullFeed", s.requiresFullFeed());
+            m.put("supportsCleanup", s.supportsCleanup());
             scenarios.add(m);
         }
         List<Map<String, Object>> categories = new ArrayList<>();
@@ -94,6 +98,27 @@ public class ScenarioController {
         out.put("batchTimeoutSeconds", props.getBatchTimeoutSeconds());
         out.put("github", github.status());
         return out;
+    }
+
+    /** Short, human-readable description of what the verify step checks (for the UI run details). */
+    private static String verifyTarget(ScenarioSpec s) {
+        return switch (s.verifyMode()) {
+            case CATALOG_VALIDATORS -> "item-config validators (" + s.verifyGroup() + ")";
+            case CATALOG_PRESENCE -> {
+                String field = s.verifyMatchField() == null || s.verifyMatchField().isBlank()
+                        ? "_id" : s.verifyMatchField();
+                String assertion = s.verifyAssertField() == null || s.verifyAssertField().isBlank()
+                        ? "" : " asserting " + s.verifyAssertField() + "=" + s.verifyAssertValue();
+                yield "item-config." + s.verifyCollection() + " by " + field + assertion;
+            }
+            case INVENTORY_PRESENCE -> {
+                String coll = s.verifyCollection() != null && !s.verifyCollection().isBlank()
+                        ? s.verifyCollection()
+                        : ("inventory-runtime".equalsIgnoreCase(s.verifyItemDb()) ? "Inventory" : "Item");
+                yield s.verifyItemDb() + "." + coll;
+            }
+            default -> "none";
+        };
     }
 
     /** The bundled sample (prefill for streaming editor / default batch file). */

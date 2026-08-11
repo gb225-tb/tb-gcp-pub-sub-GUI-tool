@@ -1,0 +1,38 @@
+{
+  "removed": "false",
+  "id": "TMW100L38115",
+  "ImageUrl": "https://image.menswearhouse.com/is/image/TMW/TMW_100L_15_CALVIN_KLEIN_SPORT_COATS_BLUE_MAIN?$40bv$",
+  "Name": "Calvin Klein Slim Fit Wool Blend Sport Coat",
+  "ExternalId": "TMW100L38115",
+  "Description": "Golden-thread sample rating for the TMW_100L family used by the QA Scenario Runner.",
+  "Brand": {
+    "ExternalId": "CALVINKLEIN",
+    "Name": "CALVIN KLEIN",
+    "Attributes": {
+      "Attribute": {
+        "id": "NAME",
+        "Value": "CALVIN KLEIN"
+      }
+    }
+  },
+  "Source": "MensWearhouse",
+  "ProductPageUrl": "https://www.menswearhouse.com/p/calvin-klein-slim-fit-sport-coat-tmw-100l",
+  "NativeReviewStatistics": {
+    "AverageOverallRating": "5.0",
+    "OverallRatingRange": "5",
+    "RatingsOnlyReviewCount": "1",
+    "RecommendedCount": "1",
+    "TotalReviewCount": "1"
+  },
+  "NumReviews": "1",
+  "ReviewStatistics": {
+    "AverageOverallRating": "5.0",
+    "OverallRatingRange": "5",
+    "TotalReviewCount": "1"
+  },
+  "ManufacturerPartNumbers": {
+    "ManufacturerPartNumber": "TMW_100L"
+  },
+  "filename": "bv_menswearhouse_ratings.xml",
+  "messageTS": "2026-05-12T19:59:26.411362494Z"
+}

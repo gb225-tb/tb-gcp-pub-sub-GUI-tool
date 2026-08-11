@@ -9,6 +9,7 @@ import FormControl from "@mui/material/FormControl";
 import IconButton from "@mui/material/IconButton";
 import InputLabel from "@mui/material/InputLabel";
 import ListItemText from "@mui/material/ListItemText";
+import ListSubheader from "@mui/material/ListSubheader";
 import MenuItem from "@mui/material/MenuItem";
 import OutlinedInput from "@mui/material/OutlinedInput";
 import Paper from "@mui/material/Paper";
@@ -34,6 +35,7 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
+import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import { ScenariosView } from "../scenarios/ScenariosView";
 import { api } from "../../api/client";
 import type {
@@ -44,6 +46,8 @@ import type {
   AutomationScenario,
   AutomationScenarioResult,
   CheckStatus,
+  HclCompareType,
+  HclRawCompareResponse,
 } from "../../api/types";
 import { useAppState } from "../../app/AppState";
 import { useUi } from "../../app/UiProvider";
@@ -57,6 +61,19 @@ const STATUS_META: Record<CheckStatus, { color: string; bg: string; label: strin
   NA: { color: "#8a5a00", bg: "#fff6e5", label: "N/A" },
   ERROR: { color: "#7c3aed", bg: "#f1e9fe", label: "Error" },
 };
+
+/** Per-verdict chip colors, shared by the run-results table and the raw-compare panel. */
+const VERDICT_META: Record<string, { color: string; bg: string }> = {
+  MATCH: { color: "#0f7b3f", bg: "#e7f6ec" },
+  INFO: { color: "#0369a1", bg: "#e8f3ff" },
+  XFORM: { color: "#7c3aed", bg: "#f1e9fe" },
+  EXTRA: { color: "#8a5a00", bg: "#fff6e5" },
+  GAP: { color: "#8a5a00", bg: "#fff6e5" },
+};
+
+function verdictStyle(verdict: string): { color: string; bg: string } {
+  return VERDICT_META[verdict] ?? { color: "#a12b29", bg: "#fdeaea" };
+}
 
 function StatusChip({ status }: { status: CheckStatus }) {
   const m = STATUS_META[status];
@@ -186,13 +203,7 @@ function ResultRow({
                               <Chip
                                 size="small"
                                 label={d.verdict}
-                                sx={{
-                                  height: 20,
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  color: d.verdict === "MATCH" ? "#0f7b3f" : d.verdict === "GAP" ? "#8a5a00" : "#a12b29",
-                                  bgcolor: d.verdict === "MATCH" ? "#e7f6ec" : d.verdict === "GAP" ? "#fff6e5" : "#fdeaea",
-                                }}
+                                sx={{ height: 20, fontSize: 11, fontWeight: 700, ...verdictStyle(d.verdict) }}
                               />
                             </TableCell>
                           </TableRow>
@@ -252,7 +263,7 @@ export function AutomationView() {
   );
   const env = activeEnv || envNames[0];
 
-  const [mode, setMode] = useState<"validate" | "scenarios">("validate");
+  const [mode, setMode] = useState<"validate" | "scenarios" | "hclcompare">("validate");
   const [catalog, setCatalog] = useState<AutomationCatalog | null>(null);
   const [tab, setTab] = useState<string>(ALL_TAB);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -266,6 +277,12 @@ export function AutomationView() {
   const [analysisById, setAnalysisById] = useState<Record<string, string>>({});
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [analyzingAll, setAnalyzingAll] = useState(false);
+
+  // Raw HCL <-> Catalog single-document compare.
+  const [hclType, setHclType] = useState<HclCompareType>("PRODUCT");
+  const [hclProductId, setHclProductId] = useState("");
+  const [hclRunning, setHclRunning] = useState(false);
+  const [hclResult, setHclResult] = useState<HclRawCompareResponse | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -318,6 +335,28 @@ export function AutomationView() {
       setRunning(false);
     }
   }, [env, tab, selectedIds, productId, sampleSize, toast]);
+
+  const runHclCompare = useCallback(async () => {
+    if (!env) {
+      toast("Select an environment.", "error");
+      return;
+    }
+    if (!hclProductId.trim()) {
+      toast("Enter a product part number.", "error");
+      return;
+    }
+    setHclRunning(true);
+    setHclResult(null);
+    try {
+      const body = { env, productId: hclProductId.trim(), type: hclType };
+      const data = await api<HclRawCompareResponse>("/api/automation/hcl-compare", { method: "POST", body });
+      setHclResult(data);
+    } catch (e) {
+      toast((e as Error).message, "error", "Compare failed");
+    } finally {
+      setHclRunning(false);
+    }
+  }, [env, hclProductId, hclType, toast]);
 
   const analyzeFailures = useCallback(
     async (failures: AutomationScenarioResult[], scopeKey: string) => {
@@ -437,6 +476,8 @@ export function AutomationView() {
             <Typography variant="caption" color="text.secondary">
               {mode === "validate"
                 ? "Read-only checks of the ingestion scenarios against live Dev/QA/Perf data. No writes."
+                : mode === "hclcompare"
+                ? "Pick a document type — fetch one raw HCL DB record and diff it against the streaming Catalog doc. Read-only; VPN + Product Id."
                 : "Inject a controlled input into Perf, wait, then verify the outcome. Perf only."}
             </Typography>
           </Box>
@@ -463,12 +504,13 @@ export function AutomationView() {
           value={mode}
           onChange={(_, v) => { if (v) setMode(v); }}
           sx={{
-            mb: mode === "validate" ? 1.75 : 0,
+            mb: mode === "scenarios" ? 0 : 1.75,
             "& .MuiToggleButton-root": { textTransform: "none", fontWeight: 700, px: 2, gap: 0.75 },
             "& .Mui-selected": { color: `${ACCENT} !important`, bgcolor: `${ACCENT}14 !important` },
           }}
         >
           <ToggleButton value="validate"><FactCheckIcon fontSize="small" /> Read-only validation</ToggleButton>
+          <ToggleButton value="hclcompare"><CompareArrowsIcon fontSize="small" /> HCL ↔ Catalog (raw)</ToggleButton>
           <ToggleButton value="scenarios"><RocketLaunchIcon fontSize="small" /> Scenario runner</ToggleButton>
         </ToggleButtonGroup>
 
@@ -483,7 +525,7 @@ export function AutomationView() {
             </Select>
           </FormControl>
 
-          <FormControl size="small" sx={{ minWidth: 220 }}>
+          <FormControl size="small" sx={{ minWidth: 220, maxWidth: 260 }}>
             <InputLabel>Scenarios</InputLabel>
             <Select
               multiple
@@ -491,16 +533,35 @@ export function AutomationView() {
               onChange={(e) => setSelectedIds(typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value)}
               input={<OutlinedInput label="Scenarios" />}
               renderValue={(sel) => (sel.length === 0 ? "All in tab" : `${sel.length} selected`)}
+              MenuProps={{ PaperProps: { sx: { maxHeight: 380, width: 340 } }, autoFocus: false }}
             >
-              {tabScenarios.map((s) => (
-                <MenuItem key={s.id} value={s.id}>
-                  <Checkbox size="small" checked={selectedIds.includes(s.id)} />
-                  <ListItemText
-                    primary={`${s.id} — ${s.title}`}
-                    secondary={s.feasibility === "NOT_APPLICABLE" ? "N/A (needs injection)" : s.priority}
-                  />
-                </MenuItem>
-              ))}
+              <Box
+                onClick={(e) => e.stopPropagation()}
+                sx={{ display: "flex", gap: 1, px: 1.5, py: 0.5, position: "sticky", top: 0, zIndex: 1, bgcolor: "background.paper", borderBottom: "1px solid", borderColor: "divider" }}
+              >
+                <Button size="small" onClick={() => setSelectedIds(tabScenarios.map((s) => s.id))}>Select all</Button>
+                <Button size="small" onClick={() => setSelectedIds([])}>Clear</Button>
+              </Box>
+              {(tab === ALL_TAB ? groups : groups.filter((g) => g.id === tab)).flatMap((g) => {
+                const items = tabScenarios.filter((s) => s.group === g.id);
+                if (items.length === 0) return [];
+                return [
+                  <ListSubheader key={`h-${g.id}`} sx={{ lineHeight: "28px", fontWeight: 800, color: "text.secondary", bgcolor: "grey.50" }}>
+                    {g.label}
+                  </ListSubheader>,
+                  ...items.map((s) => (
+                    <MenuItem key={s.id} value={s.id} dense sx={{ pl: 2 }}>
+                      <Checkbox size="small" checked={selectedIds.includes(s.id)} sx={{ py: 0 }} />
+                      <ListItemText
+                        primary={s.id}
+                        secondary={s.feasibility === "NOT_APPLICABLE" ? `${s.title} · N/A` : s.title}
+                        primaryTypographyProps={{ noWrap: true, fontFamily: "monospace", fontWeight: 700, fontSize: 12 }}
+                        secondaryTypographyProps={{ noWrap: true, variant: "caption" }}
+                      />
+                    </MenuItem>
+                  )),
+                ];
+              })}
             </Select>
           </FormControl>
 
@@ -529,11 +590,120 @@ export function AutomationView() {
           <Button variant="outlined" onClick={clear} startIcon={<ClearIcon />}>Clear</Button>
         </Stack>
         )}
+
+        {mode === "hclcompare" && (
+        <Stack direction="row" spacing={1.5} rowGap={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Environment</InputLabel>
+            <Select label="Environment" value={env} onChange={(e) => setActiveEnv(String(e.target.value))}>
+              {envNames.map((n) => (
+                <MenuItem key={n} value={n}>{n}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            size="small"
+            label="Product Id (part number)"
+            value={hclProductId}
+            onChange={(e) => setHclProductId(e.target.value)}
+            error={!hclProductId.trim()}
+            helperText={!hclProductId.trim() ? "Required" : undefined}
+            sx={{ minWidth: 220, "& .MuiFormHelperText-root": { position: "absolute", bottom: -20 } }}
+          />
+
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel>Document type</InputLabel>
+            <Select
+              label="Document type"
+              value={hclType}
+              onChange={(e) => setHclType(e.target.value as HclCompareType)}
+            >
+              <MenuItem value="PRODUCT">Product</MenuItem>
+              <MenuItem value="VARIANT">Variant</MenuItem>
+              <MenuItem value="SKU">SKU</MenuItem>
+              <MenuItem value="PRICE">Price</MenuItem>
+              <MenuItem value="ENRICHED">EnrichedProduct</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Button variant="contained" onClick={() => void runHclCompare()} disabled={hclRunning} startIcon={hclRunning ? <CircularProgress size={16} color="inherit" /> : <CompareArrowsIcon />} sx={{ bgcolor: ACCENT, "&:hover": { bgcolor: "#0369a1" } }}>
+            {hclRunning ? "Comparing…" : "Fetch & compare"}
+          </Button>
+          <Button variant="outlined" onClick={() => { setHclResult(null); setHclProductId(""); }} startIcon={<ClearIcon />}>Clear</Button>
+        </Stack>
+        )}
       </Paper>
 
       {mode === "scenarios" ? (
         <Box sx={{ flex: 1, minWidth: 0, minHeight: 0 }}>
           <ScenariosView embedded />
+        </Box>
+      ) : mode === "hclcompare" ? (
+        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          {!hclResult ? (
+            <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, textAlign: "center", color: "text.secondary" }}>
+              <CompareArrowsIcon sx={{ fontSize: 40, color: "#cbd5e1", mb: 1 }} />
+              <Typography variant="body2">
+                Enter a product part number, pick a document type, then Fetch &amp; compare.
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                One raw HCL DB record is read (untransformed) and diffed against the streaming Catalog document.
+                <b> XFORM</b> = the pipeline transformed the value (expected); <b>MISSING</b> = the source value
+                was dropped; <b>createdBy</b> shows the ingesting processor. Requires VPN.
+              </Typography>
+            </Paper>
+          ) : (
+            <Stack spacing={1.5}>
+              <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 3 }}>
+                <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <StatusChip status={hclResult.status} />
+                  <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: "monospace" }}>
+                    {hclResult.docType ?? hclResult.type}{hclResult.docId ? `[${hclResult.docId}]` : ""}
+                  </Typography>
+                  {hclResult.collection && (
+                    <Chip size="small" variant="outlined" label={`item-config · ${hclResult.collection}`} sx={{ fontFamily: "monospace", fontSize: 11 }} />
+                  )}
+                  <Box sx={{ flex: 1 }} />
+                  {hclResult.checked > 0 && (
+                    <Typography variant="caption" color="text.secondary">
+                      {hclResult.failed} differing / {hclResult.checked} fields
+                    </Typography>
+                  )}
+                </Stack>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
+                  env={hclResult.env} · {hclResult.message}
+                </Typography>
+              </Paper>
+
+              {(hclResult.diffs?.length ?? 0) > 0 && (
+                <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+                  <Table size="small" stickyHeader sx={{ "& td, & th": { borderColor: "divider" } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 700 }}>Field</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Raw HCL (source)</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Streaming (Catalog)</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Verdict</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {hclResult.diffs.map((d, i) => (
+                        <TableRow key={i} hover>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>{d.field}</TableCell>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>{d.expected ?? "—"}</TableCell>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>{d.actual ?? "—"}</TableCell>
+                          <TableCell>
+                            <Chip size="small" label={d.verdict} sx={{ height: 20, fontSize: 11, fontWeight: 700, ...verdictStyle(d.verdict) }} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Paper>
+              )}
+            </Stack>
+          )}
         </Box>
       ) : (
       <>
