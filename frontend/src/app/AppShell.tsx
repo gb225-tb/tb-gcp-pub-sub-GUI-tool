@@ -20,6 +20,7 @@ import StorageIcon from "@mui/icons-material/Storage";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import CategoryIcon from "@mui/icons-material/Category";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
+import SyncAltIcon from "@mui/icons-material/SyncAlt";
 import HubIcon from "@mui/icons-material/Hub";
 
 import { useAppState } from "./AppState";
@@ -31,9 +32,11 @@ import { HclView } from "../views/hcl/HclView";
 import { CtView } from "../views/ct/CtView";
 import { CategoriesView } from "../views/categories/CategoriesView";
 import { AutomationView } from "../views/automation/AutomationView";
+import { TransferView } from "../views/transfer/TransferView";
 
 export type ViewId =
   | "pubsub"
+  | "transfer"
   | "mongo"
   | "bulk"
   | "cleanup"
@@ -52,6 +55,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { id: "pubsub", label: "Pub/Sub", icon: <PodcastsIcon />, color: "#2f6bff" },
+  { id: "transfer", label: "Transfer", icon: <SyncAltIcon />, color: "#4f46e5" },
   { id: "mongo", label: "Compare", icon: <CompareArrowsIcon />, color: "#1aa564" },
   { id: "bulk", label: "Bulk Post", icon: <UploadFileIcon />, color: "#7b5bff" },
   { id: "cleanup", label: "Cleanup", icon: <DeleteSweepIcon />, color: "#e0413f" },
@@ -67,6 +71,8 @@ function renderView(id: ViewId): ReactNode {
   switch (id) {
     case "pubsub":
       return <PubSubView />;
+    case "transfer":
+      return <TransferView />;
     case "mongo":
       return <MongoView />;
     case "bulk":

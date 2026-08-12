@@ -3,10 +3,14 @@ import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import DownloadIcon from "@mui/icons-material/Download";
 import type { MessageView } from "../../api/types";
+import { downloadMessage } from "./download";
 
 function Meta({ k, v }: { k: string; v: string }) {
   return (
@@ -38,6 +42,19 @@ export function MessageCard({ message, defaultExpanded }: { message: MessageView
           <Typography variant="body2" color="text.secondary" noWrap sx={{ flex: 1 }}>
             {preview}
           </Typography>
+          <Tooltip title="Download this message (JSON, non-destructive — no ACK)">
+            <IconButton
+              size="small"
+              component="span"
+              onClick={(e) => {
+                e.stopPropagation();
+                downloadMessage(message);
+              }}
+              onFocus={(e) => e.stopPropagation()}
+            >
+              <DownloadIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Stack>
       </AccordionSummary>
       <AccordionDetails>

@@ -8,10 +8,12 @@ import Typography from "@mui/material/Typography";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
+import DownloadIcon from "@mui/icons-material/Download";
 import { apiUrl } from "../../api/client";
 import type { MessageView } from "../../api/types";
 import { useUi } from "../../app/UiProvider";
 import { MessageCard } from "./MessageCard";
+import { downloadMessages } from "./download";
 
 interface Props {
   path: string;
@@ -113,6 +115,13 @@ export function LiveTail({ path, name, title, mono, hint, compact }: Props) {
         </Stack>
         <Stack direction="row" alignItems="center" spacing={1}>
           <Chip label={`${messages.length} received`} size="small" variant="outlined" />
+          <Button
+            startIcon={<DownloadIcon />}
+            onClick={() => downloadMessages(messages, name)}
+            disabled={messages.length === 0}
+          >
+            Download
+          </Button>
           <Button
             color="success"
             variant="contained"

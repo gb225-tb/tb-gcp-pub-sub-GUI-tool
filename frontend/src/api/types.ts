@@ -80,6 +80,34 @@ export interface PublishMessageRequest {
   orderingKey: string | null;
 }
 
+// ---- Cross-environment topic transfer ----
+export interface TransferRequest {
+  sourceEnv: string;
+  targetEnv: string;
+  sourceTopicId: string;
+  targetTopicId: string;
+  sourceSubscriptionId?: string;
+  max?: number;
+  dryRun?: boolean;
+}
+
+export interface TransferResult {
+  sourceEnv: string;
+  targetEnv: string;
+  sourceProject: string;
+  targetProject: string;
+  sourceTopicId: string;
+  targetTopicId: string;
+  sourceSubscriptionId: string;
+  read: number;
+  published: number;
+  failed: number;
+  dryRun: boolean;
+  errors: string[];
+  sampleIds: string[];
+  messages: MessageView[];
+}
+
 export interface BulkPublishResult {
   total: number;
   published: number;

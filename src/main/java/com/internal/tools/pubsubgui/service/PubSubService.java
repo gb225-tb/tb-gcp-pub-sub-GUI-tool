@@ -26,6 +26,7 @@ import com.google.pubsub.v1.SubscriptionName;
 import com.google.pubsub.v1.Topic;
 import com.google.pubsub.v1.TopicName;
 import com.internal.tools.pubsubgui.config.PubSubClientFactory;
+import com.internal.tools.pubsubgui.config.PubSubProperties;
 import com.internal.tools.pubsubgui.model.BulkPublishRequest;
 import com.internal.tools.pubsubgui.model.MessageView;
 import com.internal.tools.pubsubgui.model.PublishMessageRequest;
@@ -33,6 +34,8 @@ import com.internal.tools.pubsubgui.model.SubscriptionCounts;
 import com.internal.tools.pubsubgui.model.SubscriptionInfo;
 import com.internal.tools.pubsubgui.model.TopicCounts;
 import com.internal.tools.pubsubgui.model.TopicInfo;
+import com.internal.tools.pubsubgui.model.TransferRequest;
+import com.internal.tools.pubsubgui.model.TransferResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -296,6 +299,148 @@ public class PubSubService {
         summary.put("failed", failed);
         summary.put("errors", errors);
         return summary;
+    }
+
+    // ------------------------------------------------- Cross-env transfer
+
+    /** Max peeked messages to echo back to the UI as a preview. */
+    private static final int TRANSFER_PREVIEW_CAP = 25;
+
+    /**
+     * Copy a topic's currently-available (unacknowledged) messages from one environment to the same-named
+     * topic in another environment. The source is read via {@link #peek} (non-destructive: the backlog is
+     * left intact), then each message is republished to the target topic with its original data, attributes
+     * and ordering key. Prod is never allowed as source or target.
+     */
+    public TransferResult transferTopic(TransferRequest req) throws IOException {
+        if (req == null) {
+            throw new IllegalArgumentException("Request body is required.");
+        }
+        PubSubProperties.Environment sourceEnv = requireEnvironment(req.sourceEnv(), "sourceEnv");
+        PubSubProperties.Environment targetEnv = requireEnvironment(req.targetEnv(), "targetEnv");
+
+        // Prod is intentionally excluded from transfers, whether as source or target.
+        if (isProd(sourceEnv) || isProd(targetEnv)) {
+            throw new IllegalArgumentException("Transfers involving Prod are not allowed.");
+        }
+
+        String sourceTopicId = trimToNull(req.sourceTopicId());
+        String targetTopicId = trimToNull(req.targetTopicId());
+        if (sourceTopicId == null || targetTopicId == null) {
+            throw new IllegalArgumentException("sourceTopicId and targetTopicId are required.");
+        }
+        if (!sourceEnv.topics().contains(sourceTopicId)) {
+            throw new IllegalArgumentException(
+                    "Topic '" + sourceTopicId + "' is not configured under environment '" + sourceEnv.getName() + "'.");
+        }
+        if (!targetEnv.topics().contains(targetTopicId)) {
+            throw new IllegalArgumentException(
+                    "Topic '" + targetTopicId + "' is not configured under environment '" + targetEnv.getName() + "'.");
+        }
+
+        String sourceProject = clients.resolveProjectId(sourceEnv.getProjectId());
+        String targetProject = clients.resolveProjectId(targetEnv.getProjectId());
+        if (sourceProject.equals(targetProject) && sourceTopicId.equals(targetTopicId)) {
+            throw new IllegalArgumentException(
+                    "Source and target resolve to the same topic; nothing to transfer.");
+        }
+
+        // Resolve which source subscription's backlog to read.
+        String subId = trimToNull(req.sourceSubscriptionId());
+        if (subId == null) {
+            List<SubscriptionInfo> subs = listSubscriptionsForTopic(sourceProject, sourceTopicId);
+            if (subs.isEmpty()) {
+                throw new IllegalArgumentException("Source topic '" + sourceTopicId
+                        + "' has no subscription, so it has no unacknowledged backlog to copy.");
+            }
+            if (subs.size() > 1) {
+                String ids = subs.stream().map(SubscriptionInfo::id).reduce((a, b) -> a + ", " + b).orElse("");
+                throw new IllegalArgumentException("Source topic has multiple subscriptions; specify "
+                        + "sourceSubscriptionId (one of: " + ids + ").");
+            }
+            subId = subs.get(0).id();
+        }
+
+        int max = req.max() == null ? 100 : Math.max(1, Math.min(req.max(), 1000));
+
+        // Non-destructive read of the current backlog.
+        List<MessageView> messages = peek(sourceProject, subId, max);
+        int read = messages.size();
+        List<String> sampleIds = messages.stream().limit(20).map(MessageView::messageId).toList();
+        List<MessageView> preview = messages.stream().limit(TRANSFER_PREVIEW_CAP).toList();
+
+        boolean dryRun = Boolean.TRUE.equals(req.dryRun());
+        if (dryRun || read == 0) {
+            return new TransferResult(sourceEnv.getName(), targetEnv.getName(), sourceProject, targetProject,
+                    sourceTopicId, targetTopicId, subId, read, 0, 0, dryRun, List.of(), sampleIds, preview);
+        }
+
+        // Publish to the target topic, preserving each message's data, attributes and ordering key.
+        requireAllowed(targetTopicId);
+        Publisher publisher = clients.publisher(targetProject, targetTopicId);
+        List<ApiFuture<String>> futures = new ArrayList<>(messages.size());
+        for (MessageView mv : messages) {
+            PubsubMessage.Builder b = PubsubMessage.newBuilder();
+            b.setData(ByteString.copyFromUtf8(mv.data() == null ? "" : mv.data()));
+            if (mv.attributes() != null) {
+                mv.attributes().forEach((k, v) -> {
+                    if (k != null && !k.isBlank()) {
+                        b.putAttributes(k, v == null ? "" : v);
+                    }
+                });
+            }
+            if (mv.orderingKey() != null && !mv.orderingKey().isBlank()) {
+                b.setOrderingKey(mv.orderingKey().trim());
+            }
+            futures.add(publisher.publish(b.build()));
+        }
+
+        int published = 0;
+        int failed = 0;
+        List<String> errors = new ArrayList<>();
+        for (int i = 0; i < futures.size(); i++) {
+            try {
+                futures.get(i).get(60, TimeUnit.SECONDS);
+                published++;
+            } catch (Exception e) {
+                failed++;
+                if (errors.size() < MAX_BULK_ERRORS) {
+                    Throwable cause = (e instanceof ExecutionException && e.getCause() != null) ? e.getCause() : e;
+                    errors.add("message #" + (i + 1) + ": " + cause.getMessage());
+                }
+            }
+        }
+
+        log.info("transfer | {}::{} -> {}::{} | sub={} read={} published={} failed={}",
+                sourceEnv.getName(), sourceTopicId, targetEnv.getName(), targetTopicId, subId, read, published, failed);
+
+        return new TransferResult(sourceEnv.getName(), targetEnv.getName(), sourceProject, targetProject,
+                sourceTopicId, targetTopicId, subId, read, published, failed, false, errors, sampleIds, preview);
+    }
+
+    private PubSubProperties.Environment requireEnvironment(String name, String field) {
+        String trimmed = trimToNull(name);
+        if (trimmed == null) {
+            throw new IllegalArgumentException(field + " is required.");
+        }
+        for (PubSubProperties.Environment env : clients.properties().getEnvironments()) {
+            if (env.getName().equalsIgnoreCase(trimmed)) {
+                return env;
+            }
+        }
+        throw new IllegalArgumentException("Unknown environment '" + trimmed + "' for " + field + ".");
+    }
+
+    private static boolean isProd(PubSubProperties.Environment env) {
+        return env.getName() != null && env.getName().trim().equalsIgnoreCase("Prod");
+    }
+
+    private static String trimToNull(String v) {
+        if (v == null) {
+            return null;
+        }
+        String t = v.trim();
+        return t.isEmpty() ? null : t;
     }
 
     // ---------------------------------------------------------- View (peek)

@@ -11,6 +11,7 @@ import Typography from "@mui/material/Typography";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import DownloadIcon from "@mui/icons-material/Download";
 import { api } from "../../api/client";
 import type { MessageView, SubscriptionCounts, SubscriptionInfo } from "../../api/types";
 import { useUi } from "../../app/UiProvider";
@@ -18,6 +19,7 @@ import { Section } from "../../components/Section";
 import { CountCards } from "./CountCards";
 import { LiveTail } from "./LiveTail";
 import { MessageCard } from "./MessageCard";
+import { downloadMessages } from "./download";
 
 interface Props {
   subId: string;
@@ -171,6 +173,13 @@ export function SubDetail({ subId, sub, onGoToTopic }: Props) {
             View messages (peek)
           </Button>
           <Button onClick={() => doPeek(1)}>View latest</Button>
+          <Button
+            startIcon={<DownloadIcon />}
+            disabled={!messages || messages.length === 0}
+            onClick={() => messages && downloadMessages(messages, subId)}
+          >
+            Download all{messages && messages.length ? ` (${messages.length})` : ""}
+          </Button>
         </Stack>
         {messages === null ? (
           <Typography variant="body2" color="text.secondary">
