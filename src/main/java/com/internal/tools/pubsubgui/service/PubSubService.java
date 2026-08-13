@@ -46,6 +46,7 @@ import reactor.core.scheduler.Schedulers;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +76,11 @@ public class PubSubService {
     private static final long PURGE_QUIET_MS = 3_000;
     /** Hard upper bound for a single purge, regardless of backlog. */
     private static final long PURGE_MAX_MS = 120_000;
+
+    /** Transfer backlog read: stop once no <em>new</em> message arrives for this long. */
+    private static final long TRANSFER_QUIET_MS = 2_500;
+    /** Transfer backlog read: hard upper bound regardless of backlog size. */
+    private static final long TRANSFER_MAX_MS = 30_000;
 
     private final PubSubClientFactory clients;
     private final MonitoringService monitoring;
@@ -363,8 +369,10 @@ public class PubSubService {
 
         int max = req.max() == null ? 100 : Math.max(1, Math.min(req.max(), 1000));
 
-        // Non-destructive read of the current backlog.
-        List<MessageView> messages = peek(sourceProject, subId, max);
+        // Non-destructive read of the current backlog. Uses a streaming subscriber
+        // (nack on every message) rather than a single returnImmediately pull, which
+        // is unreliable and frequently returns 0 even when a backlog exists.
+        List<MessageView> messages = collectBacklog(sourceProject, subId, max);
         int read = messages.size();
         List<String> sampleIds = messages.stream().limit(20).map(MessageView::messageId).toList();
         List<MessageView> preview = messages.stream().limit(TRANSFER_PREVIEW_CAP).toList();
@@ -416,6 +424,81 @@ public class PubSubService {
 
         return new TransferResult(sourceEnv.getName(), targetEnv.getName(), sourceProject, targetProject,
                 sourceTopicId, targetTopicId, subId, read, published, failed, false, errors, sampleIds, preview);
+    }
+
+    /**
+     * Non-destructively gather up to {@code max} distinct messages currently sitting in a subscription's
+     * backlog. Uses an asynchronous {@link Subscriber} and immediately {@code nack}s every message so the
+     * backlog is left intact for the real consumer. Messages are de-duplicated by id (redeliveries are
+     * ignored) and collection stops once {@code max} distinct messages are seen, no <em>new</em> message
+     * arrives for {@link #TRANSFER_QUIET_MS}, or {@link #TRANSFER_MAX_MS} elapses — whichever comes first.
+     *
+     * <p>This is far more reliable than a single {@code returnImmediately} pull, which the synchronous
+     * {@link #peek} uses and which routinely returns 0 messages even when a backlog is present.
+     */
+    private List<MessageView> collectBacklog(String projectId, String subscriptionId, int max) {
+        String project = clients.resolveProjectId(projectId);
+        ProjectSubscriptionName sub = ProjectSubscriptionName.of(project, subscriptionId);
+
+        int cap = Math.max(1, Math.min(max, 1000));
+        Set<String> seen = ConcurrentHashMap.newKeySet();
+        List<MessageView> collected = Collections.synchronizedList(new ArrayList<>(cap));
+        AtomicLong lastNew = new AtomicLong(System.currentTimeMillis());
+        CountDownLatch done = new CountDownLatch(1);
+
+        MessageReceiver receiver = (PubsubMessage message, AckReplyConsumer consumer) -> {
+            // Release immediately so the backlog stays intact (non-destructive copy).
+            consumer.nack();
+            String id = message.getMessageId();
+            if (id != null && !id.isEmpty() && !seen.add(id)) {
+                return; // redelivery of a message we already captured
+            }
+            synchronized (collected) {
+                if (collected.size() < cap) {
+                    collected.add(toMessageView(message, subscriptionId));
+                    lastNew.set(System.currentTimeMillis());
+                    if (collected.size() >= cap) {
+                        done.countDown();
+                    }
+                }
+            }
+        };
+
+        Subscriber subscriber = clients.buildSubscriber(sub, receiver);
+        subscriber.addListener(new ApiService.Listener() {
+            @Override
+            public void failed(ApiService.State from, Throwable failure) {
+                log.warn("Transfer backlog read on {} failed: {}", subscriptionId, failure.getMessage());
+                done.countDown();
+            }
+        }, MoreExecutors.directExecutor());
+
+        ScheduledExecutorService watcher = Executors.newSingleThreadScheduledExecutor();
+        long start = System.currentTimeMillis();
+        watcher.scheduleAtFixedRate(() -> {
+            long now = System.currentTimeMillis();
+            if (now - lastNew.get() >= TRANSFER_QUIET_MS || now - start >= TRANSFER_MAX_MS) {
+                done.countDown();
+            }
+        }, TRANSFER_QUIET_MS, 500, TimeUnit.MILLISECONDS);
+
+        try {
+            subscriber.startAsync().awaitRunning();
+            log.info("Transfer backlog read started on subscription {} (cap={})", subscriptionId, cap);
+            done.await(TRANSFER_MAX_MS + TRANSFER_QUIET_MS + 5_000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            watcher.shutdownNow();
+            try {
+                subscriber.stopAsync().awaitTerminated(15, TimeUnit.SECONDS);
+            } catch (Exception ignored) {
+                // best effort shutdown
+            }
+        }
+        List<MessageView> result = new ArrayList<>(collected);
+        log.info("Transfer backlog read on {} collected {} distinct message(s)", subscriptionId, result.size());
+        return result;
     }
 
     private PubSubProperties.Environment requireEnvironment(String name, String field) {
