@@ -45,6 +45,8 @@ interface UiContextValue {
   toast: (message: string, severity?: Severity, title?: string) => void;
   confirm: (options: ConfirmOptions) => void;
   withBusy: <T>(message: string, fn: () => Promise<T>) => Promise<T>;
+  /** Update the busy-overlay text mid-operation (e.g. per-batch progress). */
+  setBusyMessage: (message: string) => void;
   busy: boolean;
 }
 
@@ -117,7 +119,7 @@ export function UiProvider({ children }: { children: ReactNode }) {
   }, [confirmState, withBusy, toast]);
 
   const value = useMemo<UiContextValue>(
-    () => ({ toast, confirm, withBusy, busy: busyCount > 0 }),
+    () => ({ toast, confirm, withBusy, setBusyMessage, busy: busyCount > 0 }),
     [toast, confirm, withBusy, busyCount]
   );
 

@@ -53,6 +53,13 @@ const DELIMITERS = [
   { v: ";", label: "Semicolon" },
 ];
 
+// Publish in batches so a single request body stays small and the server never
+// has to buffer thousands of messages at once (avoids WebFlux's in-memory limit
+// and keeps peak memory bounded). Batches are posted sequentially and results
+// aggregated so the UI reports one combined published/failed count.
+const BULK_CHUNK_SIZE = 500;
+const MAX_AGGREGATED_ERRORS = 50;
+
 let filterId = 1;
 
 function FilterRow({
@@ -141,7 +148,7 @@ function FilterRow({
 
 export function BulkView() {
   const { groups, environments, activeEnv, setActiveEnv, project } = useAppState();
-  const { withBusy, toast, confirm } = useUi();
+  const { withBusy, setBusyMessage, toast, confirm } = useUi();
 
   const [schemas, setSchemas] = useState<SchemaDescriptor[]>([]);
   const [schemaId, setSchemaId] = useState("");
@@ -229,13 +236,40 @@ export function BulkView() {
 
   const doBulkPost = (msgs: string[]) =>
     withBusy(`Publishing ${msgs.length} message(s) to ${topic}…`, async () => {
-      const res = await api<BulkPublishResult>(`/api/topics/${encodeURIComponent(topic)}/publish-bulk`, {
-        method: "POST",
-        body: { messages: msgs },
-      });
-      setResults(res);
-      if (res.failed > 0) toast(`Published ${res.published}/${res.total} · ${res.failed} failed.`, "error", "Bulk publish");
-      else toast(`Published ${res.published} message(s) to ${topic}.`, "success");
+      const chunks: string[][] = [];
+      for (let i = 0; i < msgs.length; i += BULK_CHUNK_SIZE) {
+        chunks.push(msgs.slice(i, i + BULK_CHUNK_SIZE));
+      }
+
+      const agg: BulkPublishResult = { total: 0, published: 0, failed: 0, errors: [] };
+      for (let ci = 0; ci < chunks.length; ci++) {
+        const chunk = chunks[ci];
+        if (chunks.length > 1) {
+          const done = agg.published + agg.failed;
+          setBusyMessage(
+            `Publishing to ${topic}… batch ${ci + 1}/${chunks.length} · ${done}/${msgs.length} sent`
+          );
+        }
+        const res = await api<BulkPublishResult>(`/api/topics/${encodeURIComponent(topic)}/publish-bulk`, {
+          method: "POST",
+          body: { messages: chunk },
+        });
+        agg.total += res.total;
+        agg.published += res.published;
+        agg.failed += res.failed;
+        // Offset the server's per-batch message index into the overall run and cap the list.
+        if (res.errors?.length) {
+          const base = ci * BULK_CHUNK_SIZE;
+          for (const er of res.errors) {
+            if (agg.errors.length >= MAX_AGGREGATED_ERRORS) break;
+            agg.errors.push(er.replace(/^message #(\d+):/, (_, n) => `message #${base + Number(n)}:`));
+          }
+        }
+        setResults({ ...agg, errors: [...agg.errors] });
+      }
+
+      if (agg.failed > 0) toast(`Published ${agg.published}/${agg.total} · ${agg.failed} failed.`, "error", "Bulk publish");
+      else toast(`Published ${agg.published} message(s) to ${topic}.`, "success");
     });
 
   const post = () => {

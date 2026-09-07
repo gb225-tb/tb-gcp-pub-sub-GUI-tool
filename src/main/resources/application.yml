@@ -13,6 +13,12 @@ spring:
   webflux:
     # Serve the whole tool under a context path, e.g. http://localhost:8080/catalog-pubsub-gui
     base-path: ${APP_CONTEXT_PATH:/catalog-pubsub-gui}
+  codec:
+    # Raise the WebFlux in-memory buffer limit (default 256KB) so large bulk-publish
+    # request bodies (thousands of messages in one POST) don't fail with
+    # "Exceeded limit on max bytes to buffer". Applies to server request decoding
+    # and any WebClient codecs. Override via SPRING_CODEC_MAX_IN_MEMORY_SIZE.
+    max-in-memory-size: ${SPRING_CODEC_MAX_IN_MEMORY_SIZE:64MB}
 
 pubsub:
   # Allow the tool to launch `gcloud auth application-default login` from the
