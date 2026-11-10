@@ -15,7 +15,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import PodcastsIcon from "@mui/icons-material/Podcasts";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
-import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import OutputIcon from "@mui/icons-material/Output";
 import StorageIcon from "@mui/icons-material/Storage";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import CategoryIcon from "@mui/icons-material/Category";
@@ -58,7 +58,7 @@ const NAV: NavItem[] = [
   { id: "transfer", label: "Transfer", icon: <SyncAltIcon />, color: "#4f46e5" },
   { id: "mongo", label: "Compare", icon: <CompareArrowsIcon />, color: "#1aa564" },
   { id: "bulk", label: "Bulk Post", icon: <UploadFileIcon />, color: "#7b5bff" },
-  { id: "cleanup", label: "Cleanup", icon: <DeleteSweepIcon />, color: "#e0413f" },
+  { id: "cleanup", label: "Extract", icon: <OutputIcon />, color: "#b45309" },
   { id: "hcl", label: "HCL", icon: <StorageIcon />, color: "#0e9aa7" },
   { id: "ct", label: "Commerce Tool", icon: <ShoppingBagIcon />, color: "#f5871f" },
   { id: "categories", label: "Categories", icon: <CategoryIcon />, color: "#c026d3" },

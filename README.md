@@ -127,13 +127,13 @@ sent to the selected topic in a single batch request.
 > **Safety:** publishing is a real, deliberate write (like the single **Publish**
 > action) and only targets configured/allowed topics.
 
-## Product Clean Up
+## Product Extract
 
-A fourth view (left rail: **Cleanup**) deletes a product's documents from the
+A fourth view (left rail: **Extract**) deletes a product's documents from the
 config and runtime MongoDB collections in one environment, so it can be
 re-seeded / reprocessed.
 
-- Pick an **Environment**, enter a **productId**, and click **Scan**.
+- Pick an **Environment**, enter a **Product ID**, and click **Find**.
 - Two panels — **Config** (`item-config` DB) and **Runtime** (`item-runtime` DB)
   — list their collections with a checkbox and a **match-count** badge showing
   how many documents hold that productId. Collections with matches are
@@ -227,7 +227,7 @@ development with hot reload, see [Frontend (React + MUI)](#frontend-react--mui).
 
 The UI lives in [`frontend/`](frontend/) — a **Vite + React + TypeScript** app
 using **Material UI**. A left **navigation rail** switches between the four
-views (Pub/Sub, Compare, Bulk Post, Cleanup); the top **app bar** holds the
+views (Pub/Sub, Compare, Bulk Post, Extract); the top **app bar** holds the
 project field (Pub/Sub & Bulk Post only), the mode badge, and a reload button.
 
 ```
