@@ -19,6 +19,7 @@ import Typography from "@mui/material/Typography";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import OutputIcon from "@mui/icons-material/Output";
 import StorageIcon from "@mui/icons-material/Storage";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import { api } from "../../api/client";
@@ -30,6 +31,8 @@ import type {
   MongoConfig,
 } from "../../api/types";
 import { useUi } from "../../app/UiProvider";
+
+const ACCENT = "#b45309";
 
 interface CollState {
   name: string;
@@ -109,14 +112,14 @@ export function CleanupView() {
     }
     const pid = productId.trim();
     if (!pid) {
-      toast("Enter a productId.", "error");
+      toast("Enter a Product ID.", "error");
       return null;
     }
     return pid;
   };
 
   const scanMongo = (pid: string) =>
-    withBusy("Scanning collections…", async () => {
+    withBusy("Finding documents…", async () => {
       setDeleteBadges(null);
       try {
         const res = await api<CleanupScanResponse>("/api/mongo/cleanup/scan", { params: { env, productId: pid } });
@@ -133,16 +136,16 @@ export function CleanupView() {
         );
         setScanBadge(
           (res.total || 0) === 0
-            ? { text: "productId not found in any collection", kind: "warn" }
+            ? { text: "Product ID not found in any collection", kind: "warn" }
             : { text: `${res.total} document(s) found`, kind: "ok" }
         );
       } catch (e) {
-        toast((e as Error).message, "error", "Scan failed");
+        toast((e as Error).message, "error", "Find failed");
       }
     });
 
   const scanCt = (pid: string) =>
-    withBusy("Scanning commercetools…", async () => {
+    withBusy("Finding in commercetools…", async () => {
       setCtResult(null);
       try {
         const res = await api<CtCleanupScanResponse>("/api/ct/cleanup/scan", { params: { env, productId: pid } });
@@ -151,7 +154,7 @@ export function CleanupView() {
         setCtVariantSel(new Set((res.variants || []).map((v) => v.id)));
       } catch (e) {
         setCtScan(null);
-        toast((e as Error).message, "error", "CT scan failed");
+        toast((e as Error).message, "error", "commercetools find failed");
       }
     });
 
@@ -179,7 +182,7 @@ export function CleanupView() {
   const delMongo = () => {
     const pid = productId.trim();
     if (!env || !pid) {
-      toast("Select an environment and productId.", "error");
+      toast("Select an environment and a Product ID.", "error");
       return;
     }
     if (!targets.length) {
@@ -237,11 +240,11 @@ export function CleanupView() {
   const delCt = () => {
     const pid = productId.trim();
     if (!env || !pid) {
-      toast("Select an environment and productId.", "error");
+      toast("Select an environment and a Product ID.", "error");
       return;
     }
     if (!ctScan?.found) {
-      toast("Scan a productId first.", "error");
+      toast("Find a product first.", "error");
       return;
     }
     if (ctSelectedCount === 0) {
@@ -300,20 +303,42 @@ export function CleanupView() {
   return (
     <Box sx={{ height: "100%", minHeight: 0, overflow: "auto", p: 2 }}>
       <Stack spacing={2} sx={{ maxWidth: 1100, mx: "auto" }}>
-        <Typography variant="h6">Product Clean Up</Typography>
-
         <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ px: 2, pt: 2 }}>
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: 2,
+                bgcolor: ACCENT,
+                color: "#fff",
+                display: "grid",
+                placeItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <OutputIcon fontSize="small" />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
+                Product Extract
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Find a product, then remove the selected documents so the pipeline can re-seed it.
+              </Typography>
+            </Box>
+          </Stack>
           <Tabs
             value={tab}
             onChange={(_, v) => setTab(v)}
-            sx={{ px: 1, borderBottom: "1px solid", borderColor: "divider" }}
+            sx={{ px: 1, mt: 1, borderBottom: "1px solid", borderColor: "divider" }}
           >
             <Tab value="mongo" icon={<StorageIcon fontSize="small" />} iconPosition="start" label="MongoDB" />
-            <Tab value="ct" icon={<ShoppingBagIcon fontSize="small" />} iconPosition="start" label="CommerceTools" />
+            <Tab value="ct" icon={<ShoppingBagIcon fontSize="small" />} iconPosition="start" label="commercetools" />
           </Tabs>
           <Box sx={{ p: 2 }}>
             <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
-              <FormControl sx={{ minWidth: 160 }}>
+              <FormControl size="small" sx={{ minWidth: 160 }}>
                 <InputLabel>Environment</InputLabel>
                 <Select label="Environment" value={env} onChange={(e) => setEnv(String(e.target.value))}>
                   {config.environments.map((e) => (
@@ -324,7 +349,8 @@ export function CleanupView() {
                 </Select>
               </FormControl>
               <TextField
-                label="productId"
+                size="small"
+                label="Product ID"
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
                 onKeyDown={(e) => {
@@ -332,10 +358,16 @@ export function CleanupView() {
                 }}
                 sx={{ flex: 1, minWidth: 200 }}
               />
-              <Button variant="contained" startIcon={<SearchIcon />} onClick={scan}>
-                Scan
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<SearchIcon />}
+                onClick={scan}
+                sx={{ bgcolor: ACCENT, "&:hover": { bgcolor: "#92400e" } }}
+              >
+                Find
               </Button>
-              <Button variant="outlined" color="inherit" startIcon={<ClearIcon />} onClick={clear}>
+              <Button size="small" variant="outlined" color="inherit" startIcon={<ClearIcon />} onClick={clear}>
                 Clear
               </Button>
               {tab === "mongo" && scanBadge && (
@@ -350,7 +382,7 @@ export function CleanupView() {
                   label={
                     ctScan.found
                       ? `${ctScan.counts?.variant ?? 0} variant(s), ${ctScan.counts?.sku ?? 0} SKU(s)`
-                      : "productId not found in commercetools"
+                      : "Product ID not found in commercetools"
                   }
                   color={ctScan.found ? "primary" : "warning"}
                   variant={ctScan.found ? "filled" : "outlined"}
@@ -498,8 +530,8 @@ export function CleanupView() {
               <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, textAlign: "center" }}>
                 <Typography variant="body2" color="text.secondary">
                   {ctScan && !ctScan.found
-                    ? ctScan.reason || "productId not found in commercetools."
-                    : "Enter a productId and Scan to see the commercetools product tree."}
+                    ? ctScan.reason || "Product ID not found in commercetools."
+                    : "Enter a Product ID and Find to see the commercetools product tree."}
                 </Typography>
               </Paper>
             )}
