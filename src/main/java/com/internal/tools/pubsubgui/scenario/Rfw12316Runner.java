@@ -3,6 +3,7 @@ package com.internal.tools.pubsubgui.scenario;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.internal.tools.pubsubgui.automation.model.CheckResult;
+import com.internal.tools.pubsubgui.automation.model.CheckStatus;
 import com.internal.tools.pubsubgui.automation.model.Feasibility;
 import com.internal.tools.pubsubgui.automation.model.RunSummary;
 import com.internal.tools.pubsubgui.automation.model.ScenarioDef;
@@ -13,6 +14,7 @@ import com.internal.tools.pubsubgui.model.PublishMessageRequest;
 import com.internal.tools.pubsubgui.scenario.config.ScenarioProperties;
 import com.internal.tools.pubsubgui.scenario.model.PhaseStatus;
 import com.internal.tools.pubsubgui.scenario.model.RunPhase;
+import com.internal.tools.pubsubgui.scenario.model.ScenarioRunRequest;
 import com.internal.tools.pubsubgui.scenario.model.ScenarioRunState;
 import com.internal.tools.pubsubgui.service.PubSubService;
 import com.mongodb.client.MongoCollection;
@@ -32,9 +34,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * RFW-12316 item-ingestion run. Publishes the reserved TST messages to the Perf item topic, then the
- * enriched messages to the Creative Force topic, waits 10 seconds after each hop, and checks config
- * status plus runtime status.
+ * RFW-12316 item-ingestion run. Publishes every reserved TST scenario (each on its own product) to the
+ * Perf item topic, then the enriched messages to the Creative Force topic. After that wait, a case with
+ * an enriched follow-up (S6 revise) is published and waited on again, then item-config and item-runtime
+ * are checked.
  */
 @Component
 public class Rfw12316Runner {
@@ -67,7 +70,7 @@ public class Rfw12316Runner {
         this.confluence = confluence;
     }
 
-    public void run(ScenarioRunState state) {
+    public void run(ScenarioRunState state, ScenarioRunRequest request) {
         Instant started = Instant.now();
         JsonNode manifest;
         try {
@@ -78,26 +81,100 @@ public class Rfw12316Runner {
         }
         String universeTopic = manifest.path("universeTopic").asText();
         String enrichedTopic = manifest.path("enrichedTopic").asText();
-        int waitSeconds = manifest.path("waitSeconds").asInt(10);
+        int waitSeconds = manifest.path("waitSeconds").asInt(120);
+        boolean retryRuntime = request != null && Boolean.TRUE.equals(request.retryRuntimeAssertions());
+        int runtimeRetries = retryRuntime
+                ? Math.max(1, request.runtimeAssertRetries() == null ? 6 : request.runtimeAssertRetries())
+                : 0;
+        int runtimeRetrySeconds = retryRuntime
+                ? Math.max(5, request.runtimeAssertRetrySeconds() == null ? 30 : request.runtimeAssertRetrySeconds())
+                : 0;
         state.putInjection("universeTopic", universeTopic);
         state.putInjection("enrichedTopic", enrichedTopic);
         state.putInjection("waitSeconds", waitSeconds);
+        state.putInjection("retryRuntimeAssertions", retryRuntime);
+        state.putInjection("runtimeAssertRetries", runtimeRetries);
+        state.putInjection("runtimeAssertRetrySeconds", runtimeRetrySeconds);
         state.putInjection("projectId", props.getProjectId());
+
+        List<JsonNode> cases = new ArrayList<>();
+        manifest.path("cases").forEach(cases::add);
+
+        RunPhase publishPhase = state.addPhase("Publish");
+        state.startPhase(publishPhase, "Publishing every scenario");
+        try {
+            for (JsonNode caseNode : cases) {
+                publishAll(caseNode.path("universe"), universeTopic, publishPhase);
+            }
+            for (JsonNode caseNode : cases) {
+                publishAll(caseNode.path("enriched"), enrichedTopic, publishPhase);
+            }
+        } catch (Exception e) {
+            log.warn("rfw-12316 | publish failed | {}", e.getMessage());
+            state.finishPhase(publishPhase, PhaseStatus.FAILED, e.getMessage());
+            state.complete("ERROR", "Publish failed: " + e.getMessage());
+            return;
+        }
+        state.finishPhase(publishPhase, PhaseStatus.DONE, "Published every scenario");
+
+        RunPhase waitPhase = state.addPhase("Wait");
+        state.startPhase(waitPhase, "Waiting " + waitSeconds + "s before config and runtime assertions");
+        try {
+            sleep(waitSeconds);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            state.finishPhase(waitPhase, PhaseStatus.FAILED, "Wait interrupted");
+            state.complete("ERROR", "Wait interrupted");
+            return;
+        }
+        state.finishPhase(waitPhase, PhaseStatus.DONE, "Waited " + waitSeconds + "s");
+
+        if (hasFollowUp(cases)) {
+            RunPhase followUpPhase = state.addPhase("Publish revise");
+            state.startPhase(followUpPhase, "Publishing the revise follow-up after the complete enrichment");
+            try {
+                for (JsonNode caseNode : cases) {
+                    publishAll(caseNode.path("enrichedFollowUp"), enrichedTopic, followUpPhase);
+                }
+            } catch (Exception e) {
+                log.warn("rfw-12316 | revise publish failed | {}", e.getMessage());
+                state.finishPhase(followUpPhase, PhaseStatus.FAILED, e.getMessage());
+                state.complete("ERROR", "Publish failed: " + e.getMessage());
+                return;
+            }
+            state.finishPhase(followUpPhase, PhaseStatus.DONE, "Published the revise follow-up");
+
+            RunPhase followUpWait = state.addPhase("Wait for revise");
+            state.startPhase(followUpWait, "Waiting " + waitSeconds + "s for the revise enrichment");
+            try {
+                sleep(waitSeconds);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                state.finishPhase(followUpWait, PhaseStatus.FAILED, "Wait interrupted");
+                state.complete("ERROR", "Wait interrupted");
+                return;
+            }
+            state.finishPhase(followUpWait, PhaseStatus.DONE, "Waited " + waitSeconds + "s");
+        }
 
         List<ScenarioResult> results = new ArrayList<>();
         int passed = 0;
         int failed = 0;
         int errored = 0;
-        for (JsonNode caseNode : manifest.path("cases")) {
+        for (JsonNode caseNode : cases) {
             String id = caseNode.path("id").asText();
             String title = caseNode.path("title").asText();
             RunPhase phase = state.addPhase(id + " " + title);
-            state.startPhase(phase, "Publishing " + id);
+            state.startPhase(phase, "Asserting " + id + " in item-config and item-runtime");
             CheckResult result;
             try {
-                publishAll(caseNode.path("universe"), universeTopic, waitSeconds, phase);
-                publishAll(caseNode.path("enriched"), enrichedTopic, waitSeconds, phase);
                 result = assertCase(state.getEnv(), caseNode);
+                for (int attempt = 1; attempt <= runtimeRetries && runtimeNotReady(result); attempt++) {
+                    phase.setDetail("Runtime not ready for " + id + ". Retry " + attempt + " of "
+                            + runtimeRetries + " in " + runtimeRetrySeconds + "s");
+                    sleep(runtimeRetrySeconds);
+                    result = assertCase(state.getEnv(), caseNode);
+                }
             } catch (Exception e) {
                 log.warn("rfw-12316 | {} failed | {}", id, e.getMessage());
                 result = CheckResult.error(id, e.getMessage());
@@ -138,7 +215,17 @@ public class Rfw12316Runner {
         state.complete(overall, message);
     }
 
-    private void publishAll(JsonNode files, String topic, int waitSeconds, RunPhase phase) throws Exception {
+    private static boolean hasFollowUp(List<JsonNode> cases) {
+        for (JsonNode caseNode : cases) {
+            JsonNode followUp = caseNode.path("enrichedFollowUp");
+            if (followUp.isArray() && !followUp.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void publishAll(JsonNode files, String topic, RunPhase phase) throws Exception {
         if (files == null || !files.isArray() || files.isEmpty()) {
             return;
         }
@@ -147,8 +234,13 @@ public class Rfw12316Runner {
             String messageId = pubSub.publish(props.getProjectId(), topic, new PublishMessageRequest(json, null, null));
             phase.setDetail("Published " + file.asText() + " id " + messageId);
         }
-        sleep(waitSeconds);
-        phase.setDetail("Waited " + waitSeconds + "s after " + topic);
+    }
+
+    /** True when item-runtime has not caught up yet. Config-only mismatches are not retried. */
+    private static boolean runtimeNotReady(CheckResult result) {
+        return result.status() == CheckStatus.FAIL
+                && result.message() != null
+                && result.message().contains("runtime");
     }
 
     private CheckResult assertCase(String env, JsonNode spec) {

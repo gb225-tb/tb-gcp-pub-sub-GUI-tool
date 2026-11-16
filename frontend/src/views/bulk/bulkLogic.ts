@@ -255,6 +255,29 @@ export function parseDelimited(text: string, choice: string, fieldMap: FieldMap)
   return { format: "CSV/TXT", records, delimiter, headers };
 }
 
+// Full-load universe-item feed: name starts with this (case-insensitive), e.g.
+// "TMW_ECOM_ITEMS_FULL_2026-11-16.txt". When detected, Bulk Post auto-seeds
+// filters for these fields (in order) as searchable dropdowns.
+export const FULL_ITEMS_PREFIX = "tmw_ecom_items_full";
+export const FULL_ITEMS_FILTER_FIELDS = ["Categories", "RegClassCode"];
+
+// Distinct non-empty values for a field across records, sorted and capped so a
+// wide/large full-load file can't produce an unbounded options list.
+export function distinctValues(records: BulkRecord[], field: string, cap = 1000): string[] {
+  if (!field) return [];
+  const seen = new Set<string>();
+  for (const rec of records) {
+    if (!rec || typeof rec !== "object" || Array.isArray(rec)) continue;
+    const v = rec[field];
+    if (v === undefined || v === null) continue;
+    const s = String(v).trim();
+    if (s === "") continue;
+    seen.add(s);
+    if (seen.size >= cap) break;
+  }
+  return Array.from(seen).sort((a, b) => a.localeCompare(b));
+}
+
 export function computeBulkFields(result: ParseResult): string[] {
   if (result.headers && result.headers.length) return result.headers.filter(Boolean);
   const seen = new Set<string>();

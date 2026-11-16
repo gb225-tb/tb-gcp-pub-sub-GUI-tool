@@ -35,7 +35,10 @@ import {
   computeBulkFields,
   computeFiltered,
   countInvalid,
+  distinctValues,
   filterLabel,
+  FULL_ITEMS_FILTER_FIELDS,
+  FULL_ITEMS_PREFIX,
   isFilterActive,
   parseDelimited,
   parseJsonMessages,
@@ -65,11 +68,13 @@ let filterId = 1;
 function FilterRow({
   filter,
   fields,
+  options,
   onChange,
   onRemove,
 }: {
   filter: BulkFilter;
   fields: string[];
+  options: string[];
   onChange: (f: BulkFilter) => void;
   onRemove: () => void;
 }) {
@@ -116,7 +121,7 @@ function FilterRow({
           multiple
           freeSolo
           size="small"
-          options={[]}
+          options={options}
           value={filter.values}
           onChange={(_, newValue) => {
             const flat: string[] = [];
@@ -195,9 +200,21 @@ export function BulkView() {
       const result = ext === "json" ? parseJsonMessages(rawText, fieldMap) : parseDelimited(rawText, delimiter, fieldMap);
       setRecords(result.records);
       setParsed(result);
-      setFields(computeBulkFields(result));
+      const nextFields = computeBulkFields(result);
+      setFields(nextFields);
       setParseError(null);
-      setFilters([]);
+      // For the full-load universe-item feed (TMW_ECOM_ITEMS_FULL_*), auto-seed
+      // Categories then RegClassCode filters so the tester starts from the common
+      // slice. Other files start with no filters (post everything).
+      const isFullItems = (fileName || "").toLowerCase().startsWith(FULL_ITEMS_PREFIX);
+      if (isFullItems) {
+        const seeded = FULL_ITEMS_FILTER_FIELDS.filter((f) => nextFields.includes(f)).map(
+          (field) => ({ id: filterId++, field, op: "eq", values: [] as string[] })
+        );
+        setFilters(seeded);
+      } else {
+        setFilters([]);
+      }
       setResults(null);
     } catch (e) {
       setRecords([]);
@@ -211,6 +228,18 @@ export function BulkView() {
 
   const filtered = useMemo(() => computeFiltered(records, filters, matchMode), [records, filters, matchMode]);
   const anyActive = filters.some(isFilterActive);
+
+  // Distinct values per field currently referenced by a filter row, so each
+  // value box becomes a searchable dropdown seeded from the file's own data.
+  const filterFieldsKey = filters.map((f) => f.field).join("|");
+  const valueOptions = useMemo(() => {
+    const out: Record<string, string[]> = {};
+    for (const f of filters) {
+      if (f.field && !(f.field in out)) out[f.field] = distinctValues(records, f.field);
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, filterFieldsKey]);
   const invalidInfo = useMemo(() => countInvalid(records, schema), [records, schema]);
 
   const handleFile = (file: File) => {
@@ -523,6 +552,7 @@ export function BulkView() {
                     key={f.id}
                     filter={f}
                     fields={fields}
+                    options={valueOptions[f.field] || []}
                     onChange={(nf) => setFilters((prev) => prev.map((x) => (x.id === f.id ? nf : x)))}
                     onRemove={() => setFilters((prev) => prev.filter((x) => x.id !== f.id))}
                   />

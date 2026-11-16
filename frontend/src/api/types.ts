@@ -672,6 +672,10 @@ export interface ScenarioRunRequest {
   fileBase64?: string;
   /** Opt-in: delete the minimal golden data (Perf) before injecting so verify proves this run. */
   cleanup?: boolean;
+  /** RFW-12316: re-read item-runtime when the first assertion finds the runtime document is not ready. */
+  retryRuntimeAssertions?: boolean;
+  runtimeAssertRetries?: number;
+  runtimeAssertRetrySeconds?: number;
 }
 
 // ---- Schemas (Bulk Post) ----

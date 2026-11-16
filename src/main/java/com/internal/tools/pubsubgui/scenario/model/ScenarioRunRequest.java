@@ -13,6 +13,9 @@ package com.internal.tools.pubsubgui.scenario.model;
  * @param fileBase64      batch: uploaded file content, base64 (falls back to the bundled sample)
  * @param cleanup         opt-in: when true and the scenario supports it, delete the minimal golden data
  *                        (Perf only, by the scenario key) BEFORE injecting so the verify proves this run
+ * @param retryRuntimeAssertions opt-in for RFW-12316: re-read item-runtime when the first check fails
+ * @param runtimeAssertRetries   how many extra runtime reads to attempt (default 6 when the option is on)
+ * @param runtimeAssertRetrySeconds seconds to wait between those runtime reads (default 30)
  */
 public record ScenarioRunRequest(
         String env,
@@ -21,5 +24,8 @@ public record ScenarioRunRequest(
         String version,
         String fileName,
         String fileBase64,
-        boolean cleanup) {
+        boolean cleanup,
+        Boolean retryRuntimeAssertions,
+        Integer runtimeAssertRetries,
+        Integer runtimeAssertRetrySeconds) {
 }

@@ -59,8 +59,8 @@ public class ScenarioCatalog {
         add(new ScenarioSpec(
                 "CAT-RFW-12316", ScenarioCategory.CATALOG_STREAMING, "Item ingestion RFW-12316",
                 ScenarioKind.STREAMING, "ItemIngestionProcessor",
-                "Publishes the reserved TST item messages, waits 10s, publishes the enriched messages, waits 10s, "
-                        + "then checks config status, enrichmentStatus, and runtime status for each case.",
+                "Publishes every reserved TST item, then the enriched messages, waits 2 minutes, then checks "
+                        + "item-config and item-runtime. Runtime checks can be retried while CDC catches up.",
                 true,
                 "np-ecom-2-catalog_inbound_universe_item-topic",
                 null, null, null, null, null,

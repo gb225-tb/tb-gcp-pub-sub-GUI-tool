@@ -140,7 +140,7 @@ public class ScenarioRunService {
 
     private void runStreaming(ScenarioSpec spec, ScenarioRunRequest req, ScenarioRunState state) {
         if (spec.verifyMode() == VerifyMode.RFW_12316) {
-            rfw12316.run(state);
+            rfw12316.run(state, req);
             return;
         }
         String payload = firstNonBlank(req.payloadOverride(), readResource(spec.sampleResource()));

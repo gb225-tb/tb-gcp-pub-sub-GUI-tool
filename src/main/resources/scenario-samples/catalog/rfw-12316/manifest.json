@@ -2,7 +2,7 @@
   "source": "Shapes copied from scenario-samples/catalog/universe_item_message.json and enriched_product_message.json, which are the Perf feed samples. Identities use reserved TST class codes so a run does not overwrite live Perf products. Item messages publish to the item topic; enriched messages publish to the Creative Force topic.",
   "universeTopic": "np-ecom-2-catalog_inbound_universe_item-topic",
   "enrichedTopic": "np-ecom-2-catalog_inbound_cf_retail-topic",
-  "waitSeconds": 10,
+  "waitSeconds": 120,
   "cases": [
     {
       "id": "S1",
@@ -132,19 +132,24 @@
     {
       "id": "S6",
       "title": "Revise stays runtime inactive",
-      "universe": [],
+      "universe": [
+        "06-revise.universe.json"
+      ],
       "enriched": [
+        "06-complete.enriched.json"
+      ],
+      "enrichedFollowUp": [
         "06-revise.enriched.json"
       ],
-      "productId": "TMW_TST5",
-      "variantId": "TMW_TST5_15",
+      "productId": "TMW_TST6",
+      "variantId": "TMW_TST6_15",
       "banner": "TMW",
       "configStatus": "active",
       "enrichmentStatus": "revise",
       "runtime": "not-active",
       "skus": [
         {
-          "id": "TMWTST5A15",
+          "id": "TMWTST6A15",
           "configStatus": "active",
           "runtime": "not-active",
           "merged": false

@@ -58,6 +58,9 @@ import { useUi } from "../../app/UiProvider";
 
 const ACCENT = "#db2777";
 
+/** Universe item scenarios (streaming, full-load and inventory). The only ones offered in this view. */
+const UNIVERSE_ITEM_SCENARIO_IDS = ["CAT-STREAM-ITEM", "CAT-RFW-12316", "CAT-BATCH-ITEM", "INV-STREAM-ITEM"];
+
 const STATUS_META: Record<CheckStatus, { color: string; bg: string; label: string }> = {
   PASS: { color: "#0f7b3f", bg: "#e7f6ec", label: "Pass" },
   FAIL: { color: "#a12b29", bg: "#fdeaea", label: "Fail" },
@@ -146,7 +149,6 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
   const { toast } = useUi();
 
   const [catalog, setCatalog] = useState<ScenarioCatalog | null>(null);
-  const [category, setCategory] = useState<string>("");
   const [scenarioId, setScenarioId] = useState<string>("");
 
   const [payload, setPayload] = useState<string>("");
@@ -154,6 +156,9 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
   const [file, setFile] = useState<{ name: string; base64: string } | null>(null);
   const [defaultFileName, setDefaultFileName] = useState<string>("");
   const [cleanup, setCleanup] = useState<boolean>(false);
+  const [retryRuntime, setRetryRuntime] = useState<boolean>(true);
+  const [runtimeRetries, setRuntimeRetries] = useState<string>("6");
+  const [runtimeRetrySeconds, setRuntimeRetrySeconds] = useState<string>("30");
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [running, setRunning] = useState(false);
@@ -183,7 +188,6 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
       try {
         const c = await api<ScenarioCatalog>("/api/scenario/catalog");
         setCatalog(c);
-        if (c.categories.length > 0) setCategory((prev) => prev || c.categories[0].id);
       } catch (e) {
         toast((e as Error).message, "error", "Failed to load scenarios");
       }
@@ -195,27 +199,32 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
     if (pollRef.current) window.clearInterval(pollRef.current);
   }, []);
 
-  const scenariosInCategory = useMemo<ScenarioSpec[]>(
-    () => (catalog ? catalog.scenarios.filter((s) => s.category === category) : []),
-    [catalog, category]
+  const universeScenarios = useMemo<ScenarioSpec[]>(
+    () =>
+      catalog
+        ? UNIVERSE_ITEM_SCENARIO_IDS
+            .map((id) => catalog.scenarios.find((s) => s.id === id))
+            .filter((s): s is ScenarioSpec => s !== undefined)
+        : [],
+    [catalog]
   );
 
   const spec = useMemo<ScenarioSpec | null>(
-    () => scenariosInCategory.find((s) => s.id === scenarioId) ?? null,
-    [scenariosInCategory, scenarioId]
+    () => universeScenarios.find((s) => s.id === scenarioId) ?? null,
+    [universeScenarios, scenarioId]
   );
 
-  // Pick a default scenario when the category changes.
+  // Pick a default scenario once the catalog loads (or if the selected one is no longer offered).
   useEffect(() => {
-    if (scenariosInCategory.length === 0) {
+    if (universeScenarios.length === 0) {
       setScenarioId("");
       return;
     }
-    if (!scenariosInCategory.some((s) => s.id === scenarioId)) {
-      const firstEnabled = scenariosInCategory.find((s) => s.enabled) ?? scenariosInCategory[0];
+    if (!universeScenarios.some((s) => s.id === scenarioId)) {
+      const firstEnabled = universeScenarios.find((s) => s.enabled) ?? universeScenarios[0];
       setScenarioId(firstEnabled.id);
     }
-  }, [scenariosInCategory, scenarioId]);
+  }, [universeScenarios, scenarioId]);
 
   // Load the bundled sample whenever the scenario changes.
   useEffect(() => {
@@ -280,6 +289,9 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
         fileName: spec.kind === "BATCH" ? file?.name || defaultFileName : undefined,
         fileBase64: spec.kind === "BATCH" ? file?.base64 : undefined,
         cleanup: spec.supportsCleanup ? cleanup : undefined,
+        retryRuntimeAssertions: spec.id === "CAT-RFW-12316" ? retryRuntime : undefined,
+        runtimeAssertRetries: spec.id === "CAT-RFW-12316" && retryRuntime ? Number(runtimeRetries) || 6 : undefined,
+        runtimeAssertRetrySeconds: spec.id === "CAT-RFW-12316" && retryRuntime ? Number(runtimeRetrySeconds) || 30 : undefined,
       };
       const initial = await api<ScenarioRunState>("/api/scenario/run", { method: "POST", body });
       setRun(initial);
@@ -301,7 +313,7 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
       toast((e as Error).message, "error", "Run failed to start");
       setRunning(false);
     }
-  }, [spec, perfEnv, payload, version, file, defaultFileName, cleanup, toast]);
+  }, [spec, perfEnv, payload, version, file, defaultFileName, cleanup, retryRuntime, runtimeRetries, runtimeRetrySeconds, toast]);
 
   const onPickFile = async (f: File | null) => {
     if (!f) return;
@@ -402,25 +414,16 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
             sx={{ fontWeight: 700, bgcolor: "#fdf2f8", color: ACCENT, border: `1px solid #f7cfe4`, "& .MuiChip-icon": { color: ACCENT } }}
           />
 
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Category</InputLabel>
-            <Select label="Category" value={category} onChange={(e) => setCategory(String(e.target.value))}>
-              {(catalog?.categories ?? []).map((c) => (
-                <MenuItem key={c.id} value={c.id}>{c.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
           <FormControl size="small" sx={{ minWidth: 240, maxWidth: 300 }}>
-            <InputLabel>Scenario</InputLabel>
+            <InputLabel>Universe item scenario</InputLabel>
             <Select
-              label="Scenario"
+              label="Universe item scenario"
               value={scenarioId}
               onChange={(e) => setScenarioId(String(e.target.value))}
               renderValue={() => spec?.shortName ?? ""}
               MenuProps={{ PaperProps: { sx: { maxWidth: 340, maxHeight: 420 } } }}
             >
-              {scenariosInCategory.map((s) => (
+              {universeScenarios.map((s) => (
                 <MenuItem key={s.id} value={s.id} disabled={!s.enabled}>
                   <ListItemText
                     primary={s.shortName}
@@ -513,6 +516,41 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
               />
             )}
 
+            {spec.id === "CAT-RFW-12316" && (
+              <Box sx={{ mt: 1 }}>
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={retryRuntime} onChange={(e) => setRetryRuntime(e.target.checked)} sx={{ color: ACCENT, "&.Mui-checked": { color: ACCENT } }} />}
+                  label={
+                    <Typography variant="caption" color="text.secondary">
+                      Retry runtime assertions when item-runtime has not caught up yet
+                    </Typography>
+                  }
+                />
+                {retryRuntime && (
+                  <Stack direction="row" spacing={1} sx={{ mt: 0.5, mb: 1 }}>
+                    <TextField
+                      size="small"
+                      type="number"
+                      label="Runtime retries"
+                      value={runtimeRetries}
+                      onChange={(e) => setRuntimeRetries(e.target.value)}
+                      inputProps={{ min: 1, max: 20 }}
+                      sx={{ width: 150 }}
+                    />
+                    <TextField
+                      size="small"
+                      type="number"
+                      label="Seconds between retries"
+                      value={runtimeRetrySeconds}
+                      onChange={(e) => setRuntimeRetrySeconds(e.target.value)}
+                      inputProps={{ min: 5, max: 180 }}
+                      sx={{ width: 200 }}
+                    />
+                  </Stack>
+                )}
+              </Box>
+            )}
+
             {spec.kind === "STREAMING" ? (
               <>
                 <TextField
@@ -567,7 +605,7 @@ export function ScenariosView({ embedded = false }: { embedded?: boolean } = {})
           <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, textAlign: "center", color: "text.secondary" }}>
             <RocketLaunchIcon sx={{ fontSize: 40, color: "#f0abcf", mb: 1 }} />
             <Typography variant="body2">
-              Pick a category and scenario, review the target, then Run to inject into {perfEnv} and verify.
+              Pick a universe item scenario, review the target, then Run to inject into {perfEnv} and verify.
             </Typography>
           </Paper>
         ) : (
