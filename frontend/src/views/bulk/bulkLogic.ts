@@ -9,6 +9,10 @@ export interface BulkFilter {
   field: string;
   op: string;
   values: string[];
+  // Pinned filters are the fixed, labeled searchable dropdowns (Categories,
+  // RegClassCode) seeded for the full-load items file. They render as a named
+  // dropdown rather than a generic Field/Condition row and can't be removed.
+  pinned?: boolean;
 }
 
 export interface BulkOp {

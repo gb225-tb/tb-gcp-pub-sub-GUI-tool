@@ -151,6 +151,48 @@ function FilterRow({
   );
 }
 
+function PinnedFilterRow({
+  filter,
+  options,
+  onChange,
+}: {
+  filter: BulkFilter;
+  options: string[];
+  onChange: (f: BulkFilter) => void;
+}) {
+  return (
+    <Autocomplete
+      multiple
+      freeSolo
+      size="small"
+      options={options}
+      value={filter.values}
+      onChange={(_, newValue) => {
+        const flat: string[] = [];
+        (newValue as string[]).forEach((v) =>
+          String(v)
+            .split(/[,\n\t]/)
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .forEach((s) => {
+              if (!flat.includes(s)) flat.push(s);
+            })
+        );
+        onChange({ ...filter, values: flat });
+      }}
+      renderTags={(value: readonly string[], getTagProps) =>
+        value.map((option, index) => {
+          const { key, ...rest } = getTagProps({ index });
+          return <Chip key={key} label={option} {...rest} />;
+        })
+      }
+      renderInput={(params) => (
+        <TextField {...params} label={filter.field} placeholder="Search / select value(s)…" />
+      )}
+    />
+  );
+}
+
 export function BulkView() {
   const { groups, environments, activeEnv, setActiveEnv, project } = useAppState();
   const { withBusy, setBusyMessage, toast, confirm } = useUi();
@@ -203,13 +245,15 @@ export function BulkView() {
       const nextFields = computeBulkFields(result);
       setFields(nextFields);
       setParseError(null);
-      // For the full-load universe-item feed (TMW_ECOM_ITEMS_FULL_*), auto-seed
-      // Categories then RegClassCode filters so the tester starts from the common
-      // slice. Other files start with no filters (post everything).
+      // For the full-load universe-item feed (TMW_ECOM_ITEMS_FULL_*), pin
+      // Categories then RegClassCode as fixed, labeled searchable dropdowns so
+      // the tester starts from the common slice. Generic filters stay empty and
+      // are used for additional search on other fields. Other files start with
+      // no filters (post everything).
       const isFullItems = (fileName || "").toLowerCase().startsWith(FULL_ITEMS_PREFIX);
       if (isFullItems) {
         const seeded = FULL_ITEMS_FILTER_FIELDS.filter((f) => nextFields.includes(f)).map(
-          (field) => ({ id: filterId++, field, op: "eq", values: [] as string[] })
+          (field) => ({ id: filterId++, field, op: "eq", values: [] as string[], pinned: true })
         );
         setFilters(seeded);
       } else {
@@ -541,22 +585,47 @@ export function BulkView() {
                 </ToggleButtonGroup>
               </Stack>
 
+              {/* Pinned, labeled searchable dropdowns (Categories, RegClassCode)
+                  for the full-load items file. */}
+              {filters.some((f) => f.pinned) && (
+                <Stack spacing={1.5}>
+                  {filters
+                    .filter((f) => f.pinned)
+                    .map((f) => (
+                      <PinnedFilterRow
+                        key={f.id}
+                        filter={f}
+                        options={valueOptions[f.field] || []}
+                        onChange={(nf) => setFilters((prev) => prev.map((x) => (x.id === f.id ? nf : x)))}
+                      />
+                    ))}
+                </Stack>
+              )}
+
+              {/* Generic additional filters on any other field. */}
               <Stack spacing={1}>
-                {filters.length === 0 && (
+                {filters.some((f) => f.pinned) && (
                   <Typography variant="caption" color="text.secondary">
-                    No filters — every record will be posted. Add a filter to narrow it down.
+                    Additional filters (other fields)
                   </Typography>
                 )}
-                {filters.map((f) => (
-                  <FilterRow
-                    key={f.id}
-                    filter={f}
-                    fields={fields}
-                    options={valueOptions[f.field] || []}
-                    onChange={(nf) => setFilters((prev) => prev.map((x) => (x.id === f.id ? nf : x)))}
-                    onRemove={() => setFilters((prev) => prev.filter((x) => x.id !== f.id))}
-                  />
-                ))}
+                {filters.filter((f) => !f.pinned).length === 0 && (
+                  <Typography variant="caption" color="text.secondary">
+                    No additional filters — add one to narrow by another field.
+                  </Typography>
+                )}
+                {filters
+                  .filter((f) => !f.pinned)
+                  .map((f) => (
+                    <FilterRow
+                      key={f.id}
+                      filter={f}
+                      fields={fields}
+                      options={valueOptions[f.field] || []}
+                      onChange={(nf) => setFilters((prev) => prev.map((x) => (x.id === f.id ? nf : x)))}
+                      onRemove={() => setFilters((prev) => prev.filter((x) => x.id !== f.id))}
+                    />
+                  ))}
               </Stack>
 
               <Stack direction="row" alignItems="center" spacing={1}>
