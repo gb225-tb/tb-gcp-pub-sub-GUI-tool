@@ -46,7 +46,7 @@ public class ScenarioCatalog {
 
         add(new ScenarioSpec(
                 "CAT-STREAM-ITEM", ScenarioCategory.CATALOG_STREAMING, "Universe Item",
-                ScenarioKind.STREAMING, "UniverseItemIngestionProcessor",
+                ScenarioKind.STREAMING, "ItemIngestionProcessor",
                 "Publish one Universe retail item; verify Product/Variant/SKU identity invariants.",
                 true,
                 "np-ecom-2-catalog_inbound_universe_item-topic",
@@ -55,6 +55,19 @@ public class ScenarioCatalog {
                 VerifyMode.CATALOG_VALIDATORS, "UNIVERSE_ITEM", null,
                 null, null, null, null, null, null,
                 "Variant,SKU", false));
+
+        add(new ScenarioSpec(
+                "CAT-RFW-12316", ScenarioCategory.CATALOG_STREAMING, "Item ingestion RFW-12316",
+                ScenarioKind.STREAMING, "ItemIngestionProcessor",
+                "Publishes the reserved TST item messages, waits 10s, publishes the enriched messages, waits 10s, "
+                        + "then checks config status, enrichmentStatus, and runtime status for each case.",
+                true,
+                "np-ecom-2-catalog_inbound_universe_item-topic",
+                null, null, null, null, null,
+                "scenario-samples/catalog/rfw-12316/manifest.json",
+                VerifyMode.RFW_12316, null, null,
+                null, null, null, null, null, null,
+                null, false));
 
         add(new ScenarioSpec(
                 "CAT-STREAM-PRICE", ScenarioCategory.CATALOG_STREAMING, "Universe Price",

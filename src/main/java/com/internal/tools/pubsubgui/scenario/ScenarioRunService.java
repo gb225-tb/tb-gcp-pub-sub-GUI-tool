@@ -65,6 +65,7 @@ public class ScenarioRunService {
     private final AutomationEngine engine;
     private final MongoClientFactory mongo;
     private final ObjectMapper mapper;
+    private final Rfw12316Runner rfw12316;
 
     private final Map<String, ScenarioRunState> runs = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newFixedThreadPool(4, r -> {
@@ -76,7 +77,8 @@ public class ScenarioRunService {
     public ScenarioRunService(ScenarioCatalog catalog, ScenarioProperties props,
                               com.internal.tools.pubsubgui.service.PubSubService pubSub, GcsService gcs,
                               GithubActionsService github, AutomationEngine engine, MongoClientFactory mongo,
-                              ObjectMapper mapper) {
+                              ObjectMapper mapper, Rfw12316Runner rfw12316) {
+        this.rfw12316 = rfw12316;
         this.catalog = catalog;
         this.props = props;
         this.pubSub = pubSub;
@@ -137,6 +139,10 @@ public class ScenarioRunService {
     // ----------------------------------------------------------------- streaming
 
     private void runStreaming(ScenarioSpec spec, ScenarioRunRequest req, ScenarioRunState state) {
+        if (spec.verifyMode() == VerifyMode.RFW_12316) {
+            rfw12316.run(state);
+            return;
+        }
         String payload = firstNonBlank(req.payloadOverride(), readResource(spec.sampleResource()));
         state.putInjection("target", "topic " + spec.topicId());
         state.putInjection("projectId", props.getProjectId());

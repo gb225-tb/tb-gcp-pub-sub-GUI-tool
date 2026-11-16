@@ -111,6 +111,7 @@ public class ScenarioController {
                         ? "" : " asserting " + s.verifyAssertField() + "=" + s.verifyAssertValue();
                 yield "item-config." + s.verifyCollection() + " by " + field + assertion;
             }
+            case RFW_12316 -> "item-config + item-runtime (RFW-12316 cases)";
             case INVENTORY_PRESENCE -> {
                 String coll = s.verifyCollection() != null && !s.verifyCollection().isBlank()
                         ? s.verifyCollection()

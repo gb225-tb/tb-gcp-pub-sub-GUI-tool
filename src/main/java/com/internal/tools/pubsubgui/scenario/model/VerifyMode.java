@@ -17,5 +17,6 @@ public enum VerifyMode {
     CATALOG_VALIDATORS,
     CATALOG_PRESENCE,
     INVENTORY_PRESENCE,
+    RFW_12316,
     NONE
 }

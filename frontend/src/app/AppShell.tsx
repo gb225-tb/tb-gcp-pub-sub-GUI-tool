@@ -138,7 +138,7 @@ export function AppShell() {
             </Box>
             <Box sx={{ minWidth: 0 }}>
               <Typography variant="subtitle2" noWrap sx={{ lineHeight: 1.1 }}>
-                Catalog Tools
+                Catalog Utility
               </Typography>
               <Typography variant="caption" color="text.secondary" noWrap>
                 Pub/Sub · Mongo · Bulk

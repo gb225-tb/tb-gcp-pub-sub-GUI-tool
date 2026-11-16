@@ -1,4 +1,4 @@
-# Catalog Pub/Sub Monitoring Tool
+# Catalog Utility
 
 An internal, **read-only monitoring** web console for **Google Cloud Pub/Sub**.
 It is organised around message-flow groups and is designed to observe traffic

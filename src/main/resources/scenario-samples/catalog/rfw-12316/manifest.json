@@ -1,0 +1,189 @@
+{
+  "source": "Shapes copied from scenario-samples/catalog/universe_item_message.json and enriched_product_message.json, which are the Perf feed samples. Identities use reserved TST class codes so a run does not overwrite live Perf products. Item messages publish to the item topic; enriched messages publish to the Creative Force topic.",
+  "universeTopic": "np-ecom-2-catalog_inbound_universe_item-topic",
+  "enrichedTopic": "np-ecom-2-catalog_inbound_cf_retail-topic",
+  "waitSeconds": 10,
+  "cases": [
+    {
+      "id": "S1",
+      "title": "Pending enrichment",
+      "universe": [
+        "01-pending.universe.json"
+      ],
+      "enriched": [],
+      "productId": "TMW_TST1",
+      "variantId": "TMW_TST1_15",
+      "banner": "TMW",
+      "configStatus": "active",
+      "enrichmentStatus": "pending",
+      "runtime": "not-active",
+      "skus": [
+        {
+          "id": "TMWTST1A15",
+          "configStatus": "active",
+          "runtime": "not-active",
+          "merged": false
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "title": "Single child merged",
+      "universe": [
+        "02-merged-single.universe.json"
+      ],
+      "enriched": [
+        "02-merged-single.enriched.json"
+      ],
+      "productId": "TMW_TST2",
+      "variantId": "TMW_TST2_15",
+      "banner": "TMW",
+      "configStatus": "merged",
+      "enrichmentStatus": "complete",
+      "runtime": "not-active",
+      "skus": [
+        {
+          "id": "TMWTST2A15",
+          "configStatus": "merged",
+          "runtime": "not-active",
+          "merged": true
+        }
+      ]
+    },
+    {
+      "id": "S3",
+      "title": "Merged SKU does not merge parents",
+      "universe": [
+        "03-multi-active.universe.json",
+        "03-multi-merged.universe.json"
+      ],
+      "enriched": [
+        "03-multi.enriched.json"
+      ],
+      "productId": "TMW_TST3",
+      "variantId": "TMW_TST3_15",
+      "banner": "TMW",
+      "configStatus": "active",
+      "enrichmentStatus": "complete",
+      "runtime": "active",
+      "skus": [
+        {
+          "id": "TMWTST3A15",
+          "configStatus": "active",
+          "runtime": "active",
+          "merged": false
+        },
+        {
+          "id": "TMWTST3B15",
+          "configStatus": "merged",
+          "runtime": "not-active",
+          "merged": true
+        }
+      ]
+    },
+    {
+      "id": "S4",
+      "title": "Incomplete enrichment",
+      "universe": [
+        "04-incomplete.universe.json"
+      ],
+      "enriched": [
+        "04-incomplete.enriched.json"
+      ],
+      "productId": "TMW_TST4",
+      "variantId": "TMW_TST4_15",
+      "banner": "TMW",
+      "configStatus": "active",
+      "enrichmentStatus": "incomplete",
+      "runtime": "not-active",
+      "skus": [
+        {
+          "id": "TMWTST4A15",
+          "configStatus": "active",
+          "runtime": "not-active",
+          "merged": false
+        }
+      ]
+    },
+    {
+      "id": "S5",
+      "title": "Complete enrichment is runtime active",
+      "universe": [
+        "05-complete.universe.json"
+      ],
+      "enriched": [
+        "05-complete.enriched.json"
+      ],
+      "productId": "TMW_TST5",
+      "variantId": "TMW_TST5_15",
+      "banner": "TMW",
+      "configStatus": "active",
+      "enrichmentStatus": "complete",
+      "runtime": "active",
+      "skus": [
+        {
+          "id": "TMWTST5A15",
+          "configStatus": "active",
+          "runtime": "active",
+          "merged": false
+        }
+      ]
+    },
+    {
+      "id": "S6",
+      "title": "Revise stays runtime inactive",
+      "universe": [],
+      "enriched": [
+        "06-revise.enriched.json"
+      ],
+      "productId": "TMW_TST5",
+      "variantId": "TMW_TST5_15",
+      "banner": "TMW",
+      "configStatus": "active",
+      "enrichmentStatus": "revise",
+      "runtime": "not-active",
+      "skus": [
+        {
+          "id": "TMWTST5A15",
+          "configStatus": "active",
+          "runtime": "not-active",
+          "merged": false
+        }
+      ]
+    },
+    {
+      "id": "S7",
+      "title": "Banner uppercased and used in the product id",
+      "universe": [
+        "07-banner-kng.universe.json"
+      ],
+      "enriched": [
+        "07-banner-kng.enriched.json"
+      ],
+      "productId": "KNG_TST7",
+      "variantId": "KNG_TST7_15",
+      "banner": "KNG",
+      "configStatus": "active",
+      "enrichmentStatus": "complete",
+      "runtime": "active",
+      "skus": [
+        {
+          "id": "KNGTST7A15",
+          "configStatus": "active",
+          "runtime": "active",
+          "merged": false
+        }
+      ]
+    },
+    {
+      "id": "S8",
+      "title": "Missing banner is rejected",
+      "universe": [
+        "08-missing-banner.universe.json"
+      ],
+      "enriched": [],
+      "expectError": true,
+      "errorItemCode": "TMWTST8A15"
+    }
+  ]
+}

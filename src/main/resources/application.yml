@@ -465,6 +465,15 @@ github:
   ref: ${GITHUB_REF:develop}
   api-base: ${GITHUB_API_BASE:https://api.github.com}
 
+# Confluence target for the RFW-12316 results page. Token lives in secrets.local.properties.
+confluence:
+  base-url: ${CONFLUENCE_BASE_URL:https://tailored-prod.atlassian.net/wiki}
+  email: ${CONFLUENCE_EMAIL:}
+  api-token: ${CONFLUENCE_API_TOKEN:}
+  space-key: ${CONFLUENCE_SPACE_KEY:2026Replatform}
+  parent-id: ${CONFLUENCE_PARENT_ID:1116504070}
+  page-title: RFW-12316 Item ingestion scenario results
+
 logging:
   level:
     com.internal.tools.pubsubgui: INFO
