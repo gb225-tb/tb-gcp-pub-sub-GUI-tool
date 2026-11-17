@@ -59,8 +59,9 @@ public class ScenarioCatalog {
         add(new ScenarioSpec(
                 "CAT-RFW-12316", ScenarioCategory.CATALOG_STREAMING, "Item ingestion RFW-12316",
                 ScenarioKind.STREAMING, "ItemIngestionProcessor",
-                "Publishes every reserved TST item, then the enriched messages, waits 2 minutes, then checks "
-                        + "item-config and item-runtime. Runtime checks can be retried while CDC catches up.",
+                "Runs the RFW-12316 stages in order. Each stage publishes to the universe, price, promo, or "
+                        + "Creative Force topic, waits until item-config matches, then checks item-runtime. "
+                        + "Runtime checks can be retried while CDC catches up.",
                 true,
                 "np-ecom-2-catalog_inbound_universe_item-topic",
                 null, null, null, null, null,

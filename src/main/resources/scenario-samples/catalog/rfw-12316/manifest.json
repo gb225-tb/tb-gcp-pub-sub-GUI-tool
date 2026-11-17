@@ -1,194 +1,398 @@
 {
-  "source": "Shapes copied from scenario-samples/catalog/universe_item_message.json and enriched_product_message.json, which are the Perf feed samples. Identities use reserved TST class codes so a run does not overwrite live Perf products. Item messages publish to the item topic; enriched messages publish to the Creative Force topic.",
-  "universeTopic": "np-ecom-2-catalog_inbound_universe_item-topic",
-  "enrichedTopic": "np-ecom-2-catalog_inbound_cf_retail-topic",
+  "source": "Message shape copied from the Perf universe item sample. Identities are reserved R1A-R6A class codes so a run does not overwrite live Perf products. The runner deletes these ids from item-config and item-runtime before publishing.",
+  "topics": {
+    "universe": "np-ecom-2-catalog_inbound_universe_item-topic",
+    "price": "np-ecom-2-catalog_inbound_universe_price-topic",
+    "promo": "np-ecom-2-catalog_inbound_hcl_promo_prices-topic",
+    "enriched": "np-ecom-2-catalog_inbound_cf_retail-topic"
+  },
   "waitSeconds": 120,
-  "cases": [
+  "pollSeconds": 10,
+  "confirmAbsentSeconds": 20,
+  "cleanup": {
+    "products": ["TMW_R1A", "TMW_R2A", "TMW_R2B", "TMW_R3A", "TMW_R3B", "TMW_R4A", "KNG_R5A"],
+    "variants": ["TMW_R1A_15", "TMW_R2A_15", "TMW_R2B_15", "TMW_R3A_15", "TMW_R3B_15", "TMW_R4A_15", "KNG_R5A_15"],
+    "skus": ["TMWR1AA15", "TMWR1AB15", "TMWR2AA15", "TMWR2BA15", "TMWR3AA15", "TMWR3BA15", "TMWR3BB15", "TMWR4AA15", "KNGR5AA15", "TMWR6AA15"]
+  },
+  "stages": [
     {
-      "id": "S1",
-      "title": "Pending enrichment",
-      "universe": [
-        "01-pending.universe.json"
+      "id": "1.1",
+      "title": "Universe only, no enrichment and no price",
+      "confirmAbsent": true,
+      "publish": [
+        {"topic": "universe", "file": "s1/sku-a.universe.json"},
+        {"topic": "universe", "file": "s1/sku-b.universe.json"}
       ],
-      "enriched": [],
-      "productId": "TMW_TST1",
-      "variantId": "TMW_TST1_15",
-      "banner": "TMW",
-      "configStatus": "active",
-      "enrichmentStatus": "pending",
-      "runtime": "not-active",
-      "skus": [
+      "products": [
         {
-          "id": "TMWTST1A15",
+          "productId": "TMW_R1A",
+          "variantId": "TMW_R1A_15",
+          "banner": "TMW",
           "configStatus": "active",
-          "runtime": "not-active",
-          "merged": false
+          "enrichmentStatus": "pending",
+          "publishedAt": false,
+          "runtime": "absent",
+          "skus": [
+            {"id": "TMWR1AA15", "configStatus": "active", "merged": false, "runtime": "absent"},
+            {"id": "TMWR1AB15", "configStatus": "active", "merged": false, "runtime": "absent"}
+          ]
         }
       ]
     },
     {
-      "id": "S2",
-      "title": "Single child merged",
-      "universe": [
-        "02-merged-single.universe.json"
+      "id": "1.2",
+      "title": "Complete Creative Force, no price",
+      "publish": [
+        {"topic": "enriched", "file": "s1/complete.enriched.json"}
       ],
-      "enriched": [
-        "02-merged-single.enriched.json"
-      ],
-      "productId": "TMW_TST2",
-      "variantId": "TMW_TST2_15",
-      "banner": "TMW",
-      "configStatus": "merged",
-      "enrichmentStatus": "complete",
-      "runtime": "not-active",
-      "skus": [
+      "products": [
         {
-          "id": "TMWTST2A15",
+          "productId": "TMW_R1A",
+          "variantId": "TMW_R1A_15",
+          "banner": "TMW",
+          "configStatus": "active",
+          "enrichmentStatus": "complete",
+          "publishedAt": true,
+          "runtime": "active",
+          "skus": [
+            {"id": "TMWR1AA15", "configStatus": "active", "merged": false, "runtime": "absent"},
+            {"id": "TMWR1AB15", "configStatus": "active", "merged": false, "runtime": "absent"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1.3",
+      "title": "List, sale, and promo price promote runtime SKU",
+      "publish": [
+        {"topic": "price", "file": "s1/sku-a.list.json"},
+        {"topic": "price", "file": "s1/sku-a.sale.json"},
+        {"topic": "price", "file": "s1/sku-b.list.json"},
+        {"topic": "price", "file": "s1/sku-b.sale.json"},
+        {"topic": "promo", "file": "s1/promo.json"}
+      ],
+      "products": [
+        {
+          "productId": "TMW_R1A",
+          "variantId": "TMW_R1A_15",
+          "banner": "TMW",
+          "configStatus": "active",
+          "enrichmentStatus": "complete",
+          "publishedAt": true,
+          "runtime": "active",
+          "skus": [
+            {"id": "TMWR1AA15", "configStatus": "active", "merged": false, "runtime": "active", "isSale": true},
+            {"id": "TMWR1AB15", "configStatus": "active", "merged": false, "runtime": "active", "isSale": true}
+          ]
+        }
+      ],
+      "prices": [
+        {"id": "TMWR1AA15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99},
+        {"id": "TMWR1AB15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99}
+      ]
+    },
+    {
+      "id": "2.1",
+      "title": "Second product, universe only",
+      "confirmAbsent": true,
+      "publish": [
+        {"topic": "universe", "file": "s2/sku.universe.json"}
+      ],
+      "products": [
+        {
+          "productId": "TMW_R2A",
+          "variantId": "TMW_R2A_15",
+          "banner": "TMW",
+          "configStatus": "active",
+          "enrichmentStatus": "pending",
+          "publishedAt": false,
+          "runtime": "absent",
+          "skus": [
+            {"id": "TMWR2AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2.2",
+      "title": "Blank description stays incomplete and unpublished",
+      "confirmAbsent": true,
+      "publish": [
+        {"topic": "enriched", "file": "s2/incomplete.enriched.json"}
+      ],
+      "products": [
+        {
+          "productId": "TMW_R2A",
+          "variantId": "TMW_R2A_15",
+          "banner": "TMW",
+          "configStatus": "active",
+          "enrichmentStatus": "incomplete",
+          "publishedAt": false,
+          "runtime": "absent",
+          "skus": [
+            {"id": "TMWR2AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2.2b",
+      "title": "Image-blank product, universe only",
+      "confirmAbsent": true,
+      "publish": [
+        {"topic": "universe", "file": "s2b/sku.universe.json"}
+      ],
+      "products": [
+        {
+          "productId": "TMW_R2B",
+          "variantId": "TMW_R2B_15",
+          "banner": "TMW",
+          "configStatus": "active",
+          "enrichmentStatus": "pending",
+          "publishedAt": false,
+          "runtime": "absent",
+          "skus": [
+            {"id": "TMWR2BA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2.2c",
+      "title": "Name and description without an image do not publish",
+      "confirmAbsent": true,
+      "publish": [
+        {"topic": "enriched", "file": "s2b/image-blank.enriched.json"}
+      ],
+      "products": [
+        {
+          "productId": "TMW_R2B",
+          "variantId": "TMW_R2B_15",
+          "banner": "TMW",
+          "configStatus": "active",
+          "enrichmentStatus": "complete",
+          "publishedAt": false,
+          "runtime": "absent",
+          "skus": [
+            {"id": "TMWR2BA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2.3",
+      "title": "Price on an incomplete SKU does not promote runtime SKU",
+      "publish": [
+        {"topic": "price", "file": "s2/sku.list.json"},
+        {"topic": "price", "file": "s2/sku.sale.json"},
+        {"topic": "promo", "file": "s2/promo.json"}
+      ],
+      "products": [
+        {
+          "productId": "TMW_R2A",
+          "variantId": "TMW_R2A_15",
+          "banner": "TMW",
+          "configStatus": "active",
+          "enrichmentStatus": "incomplete",
+          "publishedAt": false,
+          "runtime": "absent",
+          "skus": [
+            {"id": "TMWR2AA15", "configStatus": "active", "merged": false, "runtime": "absent", "isSale": true}
+          ]
+        }
+      ],
+      "prices": [
+        {"id": "TMWR2AA15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99}
+      ]
+    },
+    {
+      "id": "3.1",
+      "title": "Single SKU whose parent code differs is merged",
+      "confirmAbsent": true,
+      "publish": [
+        {"topic": "universe", "file": "s3/merged.universe.json"}
+      ],
+      "products": [
+        {
+          "productId": "TMW_R3A",
+          "variantId": "TMW_R3A_15",
+          "banner": "TMW",
           "configStatus": "merged",
-          "runtime": "not-active",
-          "merged": true
+          "enrichmentStatus": "pending",
+          "publishedAt": false,
+          "runtime": "absent",
+          "skus": [
+            {"id": "TMWR3AA15", "configStatus": "merged", "merged": true, "runtime": "absent"}
+          ]
         }
       ]
     },
     {
-      "id": "S3",
-      "title": "Merged SKU does not merge parents",
-      "universe": [
-        "03-multi-active.universe.json",
-        "03-multi-merged.universe.json"
+      "id": "3.2",
+      "title": "A merged SKU does not merge a product that also has an active SKU",
+      "confirmAbsent": true,
+      "publish": [
+        {"topic": "universe", "file": "s3/active.universe.json"},
+        {"topic": "universe", "file": "s3/merged-sibling.universe.json"}
       ],
-      "enriched": [
-        "03-multi.enriched.json"
-      ],
-      "productId": "TMW_TST3",
-      "variantId": "TMW_TST3_15",
-      "banner": "TMW",
-      "configStatus": "active",
-      "enrichmentStatus": "complete",
-      "runtime": "active",
-      "skus": [
+      "products": [
         {
-          "id": "TMWTST3A15",
+          "productId": "TMW_R3B",
+          "variantId": "TMW_R3B_15",
+          "banner": "TMW",
           "configStatus": "active",
+          "enrichmentStatus": "pending",
+          "publishedAt": false,
+          "runtime": "absent",
+          "skus": [
+            {"id": "TMWR3BA15", "configStatus": "active", "merged": false, "runtime": "absent"},
+            {"id": "TMWR3BB15", "configStatus": "merged", "merged": true, "runtime": "absent"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "4.1",
+      "title": "Revise product, universe only",
+      "confirmAbsent": true,
+      "publish": [
+        {"topic": "universe", "file": "s4/sku.universe.json"}
+      ],
+      "products": [
+        {
+          "productId": "TMW_R4A",
+          "variantId": "TMW_R4A_15",
+          "banner": "TMW",
+          "configStatus": "active",
+          "enrichmentStatus": "pending",
+          "publishedAt": false,
+          "runtime": "absent",
+          "skus": [
+            {"id": "TMWR4AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "4.2",
+      "title": "Revise product reaches complete",
+      "publish": [
+        {"topic": "enriched", "file": "s4/complete.enriched.json"}
+      ],
+      "products": [
+        {
+          "productId": "TMW_R4A",
+          "variantId": "TMW_R4A_15",
+          "banner": "TMW",
+          "configStatus": "active",
+          "enrichmentStatus": "complete",
+          "publishedAt": true,
           "runtime": "active",
-          "merged": false
-        },
-        {
-          "id": "TMWTST3B15",
-          "configStatus": "merged",
-          "runtime": "not-active",
-          "merged": true
+          "skus": [
+            {"id": "TMWR4AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+          ]
         }
       ]
     },
     {
-      "id": "S4",
-      "title": "Incomplete enrichment",
-      "universe": [
-        "04-incomplete.universe.json"
+      "id": "4.3",
+      "title": "Changed name, description, and image become revise",
+      "publish": [
+        {"topic": "enriched", "file": "s4/revise.enriched.json"}
       ],
-      "enriched": [
-        "04-incomplete.enriched.json"
-      ],
-      "productId": "TMW_TST4",
-      "variantId": "TMW_TST4_15",
-      "banner": "TMW",
-      "configStatus": "active",
-      "enrichmentStatus": "incomplete",
-      "runtime": "not-active",
-      "skus": [
+      "products": [
         {
-          "id": "TMWTST4A15",
+          "productId": "TMW_R4A",
+          "variantId": "TMW_R4A_15",
+          "banner": "TMW",
           "configStatus": "active",
-          "runtime": "not-active",
-          "merged": false
+          "enrichmentStatus": "revise",
+          "publishedAt": true,
+          "runtime": "inactive",
+          "skus": [
+            {"id": "TMWR4AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+          ]
         }
       ]
     },
     {
-      "id": "S5",
-      "title": "Complete enrichment is runtime active",
-      "universe": [
-        "05-complete.universe.json"
+      "id": "5.1",
+      "title": "Lowercase banner is stored uppercased",
+      "confirmAbsent": true,
+      "publish": [
+        {"topic": "universe", "file": "s5/sku.universe.json"}
       ],
-      "enriched": [
-        "05-complete.enriched.json"
-      ],
-      "productId": "TMW_TST5",
-      "variantId": "TMW_TST5_15",
-      "banner": "TMW",
-      "configStatus": "active",
-      "enrichmentStatus": "complete",
-      "runtime": "active",
-      "skus": [
+      "products": [
         {
-          "id": "TMWTST5A15",
+          "productId": "KNG_R5A",
+          "variantId": "KNG_R5A_15",
+          "banner": "KNG",
           "configStatus": "active",
+          "enrichmentStatus": "pending",
+          "publishedAt": false,
+          "runtime": "absent",
+          "skus": [
+            {"id": "KNGR5AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "5.2",
+      "title": "KNG complete enrichment promotes runtime with banner KNG",
+      "publish": [
+        {"topic": "enriched", "file": "s5/complete.enriched.json"}
+      ],
+      "products": [
+        {
+          "productId": "KNG_R5A",
+          "variantId": "KNG_R5A_15",
+          "banner": "KNG",
+          "configStatus": "active",
+          "enrichmentStatus": "complete",
+          "publishedAt": true,
           "runtime": "active",
-          "merged": false
+          "skus": [
+            {"id": "KNGR5AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+          ]
         }
       ]
     },
     {
-      "id": "S6",
-      "title": "Revise stays runtime inactive",
-      "universe": [
-        "06-revise.universe.json"
-      ],
-      "enriched": [
-        "06-complete.enriched.json"
-      ],
-      "enrichedFollowUp": [
-        "06-revise.enriched.json"
-      ],
-      "productId": "TMW_TST6",
-      "variantId": "TMW_TST6_15",
-      "banner": "TMW",
-      "configStatus": "active",
-      "enrichmentStatus": "revise",
-      "runtime": "not-active",
-      "skus": [
-        {
-          "id": "TMWTST6A15",
-          "configStatus": "active",
-          "runtime": "not-active",
-          "merged": false
-        }
-      ]
-    },
-    {
-      "id": "S7",
-      "title": "Banner uppercased and used in the product id",
-      "universe": [
-        "07-banner-kng.universe.json"
-      ],
-      "enriched": [
-        "07-banner-kng.enriched.json"
-      ],
-      "productId": "KNG_TST7",
-      "variantId": "KNG_TST7_15",
-      "banner": "KNG",
-      "configStatus": "active",
-      "enrichmentStatus": "complete",
-      "runtime": "active",
-      "skus": [
-        {
-          "id": "KNGTST7A15",
-          "configStatus": "active",
-          "runtime": "active",
-          "merged": false
-        }
-      ]
-    },
-    {
-      "id": "S8",
+      "id": "6",
       "title": "Missing banner is rejected",
-      "universe": [
-        "08-missing-banner.universe.json"
-      ],
-      "enriched": [],
       "expectError": true,
-      "errorItemCode": "TMWTST8A15"
+      "errorItemCode": "TMWR6AA15",
+      "publish": [
+        {"topic": "universe", "file": "s6/missing-banner.universe.json"}
+      ]
+    },
+    {
+      "id": "7",
+      "title": "Replaying the universe item keeps complete enrichment",
+      "publish": [
+        {"topic": "universe", "file": "s1/sku-a.universe.json"},
+        {"topic": "universe", "file": "s1/sku-b.universe.json"}
+      ],
+      "products": [
+        {
+          "productId": "TMW_R1A",
+          "variantId": "TMW_R1A_15",
+          "banner": "TMW",
+          "configStatus": "active",
+          "enrichmentStatus": "complete",
+          "publishedAt": true,
+          "runtime": "active",
+          "skus": [
+            {"id": "TMWR1AA15", "configStatus": "active", "merged": false, "runtime": "active", "isSale": true},
+            {"id": "TMWR1AB15", "configStatus": "active", "merged": false, "runtime": "active", "isSale": true}
+          ]
+        }
+      ],
+      "prices": [
+        {"id": "TMWR1AA15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99},
+        {"id": "TMWR1AB15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99}
+      ]
     }
   ]
 }

@@ -1,0 +1,22 @@
+{
+  "skus": [
+    {
+      "partNumber": "TMWR1AA15",
+      "isSale": true,
+      "prices": {
+        "TMWCASListPrice": 249.99,
+        "TMWSalePrice": 199.99,
+        "TMWCASPrice": 179.99
+      }
+    },
+    {
+      "partNumber": "TMWR1AB15",
+      "isSale": true,
+      "prices": {
+        "TMWCASListPrice": 249.99,
+        "TMWSalePrice": 199.99,
+        "TMWCASPrice": 179.99
+      }
+    }
+  ]
+}
