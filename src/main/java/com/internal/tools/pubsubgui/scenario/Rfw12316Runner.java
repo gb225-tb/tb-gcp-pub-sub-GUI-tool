@@ -52,7 +52,7 @@ public class Rfw12316Runner {
             "isMonogramming", "isDropShippable", "showMyRegistry");
     private static final List<String> VARIANT_FLAGS = List.of("isOnlineExclusive", "isDefaultColor");
     private static final List<String> SKU_FLAGS = List.of(
-            "isBigAndTall", "isClearance", "isDropShippable", "isTempMarkdown", "isSale", "isMerged");
+            "isBigAndTall", "isClearance", "isDropShippable", "isSale", "isMerged");
 
     private final PubSubService pubSub;
     private final ScenarioProperties props;
@@ -175,6 +175,12 @@ public class Rfw12316Runner {
             deleteIds(env, database, "Variant", variants);
             deleteIds(env, database, "SKU", skus);
             deleteIds(env, database, "Price", skus);
+            // Also drop any residual child whose parent is a reserved product but whose own id
+            // (different colour/size) is not in the exact id lists. A leftover sibling variant/SKU
+            // would otherwise give a reserved product more than one child and defeat the
+            // single-child "merged" parent-status rule (seen as config status inactive vs merged).
+            deleteByField(env, database, "Variant", "productId", products);
+            deleteByField(env, database, "SKU", "productId", products);
         }
         if (!skus.isEmpty()) {
             mongo.database(env, CONFIG_DB).getCollection("Errors")
@@ -187,6 +193,13 @@ public class Rfw12316Runner {
             return;
         }
         mongo.database(env, database).getCollection(collection).deleteMany(Filters.in("_id", ids));
+    }
+
+    private void deleteByField(String env, String database, String collection, String field, List<String> values) {
+        if (values.isEmpty()) {
+            return;
+        }
+        mongo.database(env, database).getCollection(collection).deleteMany(Filters.in(field, values));
     }
 
     private void publishStage(JsonNode files, JsonNode topics, RunPhase phase) throws Exception {
