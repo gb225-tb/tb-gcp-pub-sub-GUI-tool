@@ -159,7 +159,7 @@
     },
     {
       "id": "2.2c",
-      "title": "Name and description without an image do not publish",
+      "title": "Name and description without an image stay incomplete",
       "confirmAbsent": true,
       "publish": [
         {"topic": "enriched", "file": "s2b/image-blank.enriched.json"}
@@ -170,7 +170,7 @@
           "variantId": "TMW_R2B_15",
           "banner": "TMW",
           "configStatus": "active",
-          "enrichmentStatus": "complete",
+          "enrichmentStatus": "incomplete",
           "publishedAt": false,
           "runtime": "absent",
           "skus": [
@@ -306,9 +306,9 @@
           "variantId": "TMW_R4A_15",
           "banner": "TMW",
           "configStatus": "active",
-          "enrichmentStatus": "revise",
-          "publishedAt": true,
-          "runtime": "inactive",
+      "enrichmentStatus": "revise",
+      "publishedAt": true,
+      "runtime": "active",
           "skus": [
             {"id": "TMWR4AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
@@ -369,7 +369,7 @@
     },
     {
       "id": "7",
-      "title": "Replaying the universe item keeps complete enrichment",
+      "title": "Replaying the universe item returns enrichment to pending",
       "publish": [
         {"topic": "universe", "file": "s1/sku-a.universe.json"},
         {"topic": "universe", "file": "s1/sku-b.universe.json"}
@@ -380,12 +380,12 @@
           "variantId": "TMW_R1A_15",
           "banner": "TMW",
           "configStatus": "active",
-          "enrichmentStatus": "complete",
+          "enrichmentStatus": "pending",
           "publishedAt": true,
-          "runtime": "active",
+          "runtime": "inactive",
           "skus": [
-            {"id": "TMWR1AA15", "configStatus": "active", "merged": false, "runtime": "active", "isSale": true},
-            {"id": "TMWR1AB15", "configStatus": "active", "merged": false, "runtime": "active", "isSale": true}
+            {"id": "TMWR1AA15", "configStatus": "active", "merged": false, "runtime": "inactive", "isSale": true},
+            {"id": "TMWR1AB15", "configStatus": "active", "merged": false, "runtime": "inactive", "isSale": true}
           ]
         }
       ],

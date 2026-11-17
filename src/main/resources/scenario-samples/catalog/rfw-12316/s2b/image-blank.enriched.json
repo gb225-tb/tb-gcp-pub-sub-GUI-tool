@@ -2,7 +2,7 @@
   "productId": "TMW_R2B_15",
   "brand": "TMW",
   "shortDescription": "Catalog Utility jacket without an image",
-  "longDescription": "Name and description are present, so enrichment is complete, but there is no image.",
+  "longDescription": "Name and description are present, but there is no image, so enrichment is incomplete.",
   "onlineExclusive": "N",
   "defaultColor": "N",
   "assetNames": ""
