@@ -12,7 +12,7 @@
   "cleanup": {
     "products": ["TMW_R1A", "TMW_R2A", "TMW_R2B", "TMW_R3A", "TMW_R3B", "TMW_R4A", "KNG_R5A"],
     "variants": ["TMW_R1A_15", "TMW_R2A_15", "TMW_R2B_15", "TMW_R3A_15", "TMW_R3B_15", "TMW_R4A_15", "KNG_R5A_15"],
-    "skus": ["TMWR1AA15", "TMWR1AB15", "TMWR2AA15", "TMWR2BA15", "TMWR3AA15", "TMWR3BA15", "TMWR3BB15", "TMWR4AA15", "KNGR5AA15", "TMWR6AA15"]
+    "skus": ["TMWR1A0A15", "TMWR1A0B15", "TMWR2A0A15", "TMWR2B0A15", "TMWR3A0A15", "TMWR3B0A15", "TMWR3B0B15", "TMWR4A0A15", "KNGR5A0A15", "TMWR6A0A15"]
   },
   "stages": [
     {
@@ -33,8 +33,8 @@
           "publishedAt": false,
           "runtime": "absent",
           "skus": [
-            {"id": "TMWR1AA15", "configStatus": "active", "merged": false, "runtime": "absent"},
-            {"id": "TMWR1AB15", "configStatus": "active", "merged": false, "runtime": "absent"}
+            {"id": "TMWR1A0A15", "configStatus": "active", "merged": false, "runtime": "absent"},
+            {"id": "TMWR1A0B15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
         }
       ]
@@ -55,8 +55,8 @@
           "publishedAt": true,
           "runtime": "active",
           "skus": [
-            {"id": "TMWR1AA15", "configStatus": "active", "merged": false, "runtime": "absent"},
-            {"id": "TMWR1AB15", "configStatus": "active", "merged": false, "runtime": "absent"}
+            {"id": "TMWR1A0A15", "configStatus": "active", "merged": false, "runtime": "absent"},
+            {"id": "TMWR1A0B15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
         }
       ]
@@ -81,14 +81,14 @@
           "publishedAt": true,
           "runtime": "active",
           "skus": [
-            {"id": "TMWR1AA15", "configStatus": "active", "merged": false, "runtime": "active", "isSale": true},
-            {"id": "TMWR1AB15", "configStatus": "active", "merged": false, "runtime": "active", "isSale": true}
+            {"id": "TMWR1A0A15", "configStatus": "active", "merged": false, "runtime": "active", "isSale": true},
+            {"id": "TMWR1A0B15", "configStatus": "active", "merged": false, "runtime": "active", "isSale": true}
           ]
         }
       ],
       "prices": [
-        {"id": "TMWR1AA15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99},
-        {"id": "TMWR1AB15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99}
+        {"id": "TMWR1A0A15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99},
+        {"id": "TMWR1A0B15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99}
       ]
     },
     {
@@ -108,7 +108,7 @@
           "publishedAt": false,
           "runtime": "absent",
           "skus": [
-            {"id": "TMWR2AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+            {"id": "TMWR2A0A15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
         }
       ]
@@ -130,7 +130,7 @@
           "publishedAt": false,
           "runtime": "absent",
           "skus": [
-            {"id": "TMWR2AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+            {"id": "TMWR2A0A15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
         }
       ]
@@ -152,7 +152,7 @@
           "publishedAt": false,
           "runtime": "absent",
           "skus": [
-            {"id": "TMWR2BA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+            {"id": "TMWR2B0A15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
         }
       ]
@@ -174,7 +174,7 @@
           "publishedAt": false,
           "runtime": "absent",
           "skus": [
-            {"id": "TMWR2BA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+            {"id": "TMWR2B0A15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
         }
       ]
@@ -197,12 +197,12 @@
           "publishedAt": false,
           "runtime": "absent",
           "skus": [
-            {"id": "TMWR2AA15", "configStatus": "active", "merged": false, "runtime": "absent", "isSale": true}
+            {"id": "TMWR2A0A15", "configStatus": "active", "merged": false, "runtime": "absent", "isSale": true}
           ]
         }
       ],
       "prices": [
-        {"id": "TMWR2AA15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99}
+        {"id": "TMWR2A0A15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99}
       ]
     },
     {
@@ -222,7 +222,7 @@
           "publishedAt": false,
           "runtime": "absent",
           "skus": [
-            {"id": "TMWR3AA15", "configStatus": "merged", "merged": true, "runtime": "absent"}
+            {"id": "TMWR3A0A15", "configStatus": "merged", "merged": true, "runtime": "absent"}
           ]
         }
       ]
@@ -245,8 +245,8 @@
           "publishedAt": false,
           "runtime": "absent",
           "skus": [
-            {"id": "TMWR3BA15", "configStatus": "active", "merged": false, "runtime": "absent"},
-            {"id": "TMWR3BB15", "configStatus": "merged", "merged": true, "runtime": "absent"}
+            {"id": "TMWR3B0A15", "configStatus": "active", "merged": false, "runtime": "absent"},
+            {"id": "TMWR3B0B15", "configStatus": "merged", "merged": true, "runtime": "absent"}
           ]
         }
       ]
@@ -268,7 +268,7 @@
           "publishedAt": false,
           "runtime": "absent",
           "skus": [
-            {"id": "TMWR4AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+            {"id": "TMWR4A0A15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
         }
       ]
@@ -289,7 +289,7 @@
           "publishedAt": true,
           "runtime": "active",
           "skus": [
-            {"id": "TMWR4AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+            {"id": "TMWR4A0A15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
         }
       ]
@@ -310,7 +310,7 @@
       "publishedAt": true,
       "runtime": "active",
           "skus": [
-            {"id": "TMWR4AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+            {"id": "TMWR4A0A15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
         }
       ]
@@ -332,7 +332,7 @@
           "publishedAt": false,
           "runtime": "absent",
           "skus": [
-            {"id": "KNGR5AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+            {"id": "KNGR5A0A15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
         }
       ]
@@ -353,7 +353,7 @@
           "publishedAt": true,
           "runtime": "active",
           "skus": [
-            {"id": "KNGR5AA15", "configStatus": "active", "merged": false, "runtime": "absent"}
+            {"id": "KNGR5A0A15", "configStatus": "active", "merged": false, "runtime": "absent"}
           ]
         }
       ]
@@ -362,7 +362,7 @@
       "id": "6",
       "title": "Missing banner is rejected",
       "expectError": true,
-      "errorItemCode": "TMWR6AA15",
+      "errorItemCode": "TMWR6A0A15",
       "publish": [
         {"topic": "universe", "file": "s6/missing-banner.universe.json"}
       ]
@@ -384,14 +384,14 @@
           "publishedAt": true,
           "runtime": "inactive",
           "skus": [
-            {"id": "TMWR1AA15", "configStatus": "active", "merged": false, "runtime": "inactive", "isSale": true},
-            {"id": "TMWR1AB15", "configStatus": "active", "merged": false, "runtime": "inactive", "isSale": true}
+            {"id": "TMWR1A0A15", "configStatus": "active", "merged": false, "runtime": "inactive", "isSale": true},
+            {"id": "TMWR1A0B15", "configStatus": "active", "merged": false, "runtime": "inactive", "isSale": true}
           ]
         }
       ],
       "prices": [
-        {"id": "TMWR1AA15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99},
-        {"id": "TMWR1AB15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99}
+        {"id": "TMWR1A0A15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99},
+        {"id": "TMWR1A0B15", "runtime": "present", "listPrice": 249.99, "salePrice": 199.99, "promoPrice": 179.99, "finalPrice": 179.99}
       ]
     }
   ]
