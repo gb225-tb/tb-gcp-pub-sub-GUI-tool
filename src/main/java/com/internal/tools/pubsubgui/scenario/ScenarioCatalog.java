@@ -121,14 +121,15 @@ public class ScenarioCatalog {
         add(new ScenarioSpec(
                 "CAT-STREAM-PROMO-PRICE", ScenarioCategory.CATALOG_STREAMING, "HCL Promo Price",
                 ScenarioKind.STREAMING, "PromoPriceIngestionProcessor",
-                "Publish one HCL promo price; verify the target Price document exists.",
+                "Publish one HCL promo price ({skus:[{partNumber,isSale,prices}]}); verify the config Price "
+                        + "document for the SKU exists.",
                 true,
                 "np-ecom-2-catalog_inbound_hcl_promo_prices-topic",
                 null, null, null, null, null,
                 "scenario-samples/catalog/hcl_promo_price_message.json",
                 VerifyMode.CATALOG_PRESENCE, null, null,
                 "Price", "partNumber", null, "_id", null, null,
-                null, false));
+                null, false, "TMW100L38115"));
 
         add(new ScenarioSpec(
                 "CAT-STREAM-CATEGORY", ScenarioCategory.CATALOG_STREAMING, "HCL Category",

@@ -28,7 +28,7 @@ Inventory samples share one SKU/location so presence checks are consistent:
 | `catalog/enriched_product_message.json` | CfRetailItemIngestionProcessor | streaming | validators (ENRICHED) |
 | `catalog/bv_ratings_message.json` | BVProductRatingsIngestionProcessor | streaming | presence Rating |
 | `catalog/hcl_promo_message.json` | PromoMessageProcessor | streaming | presence Variant |
-| `catalog/hcl_promo_price_message.json` | PromoPriceIngestionProcessor | streaming | presence Price |
+| `catalog/hcl_promo_price_message.json` | PromoPriceIngestionProcessor | streaming | presence Price (`_id=TMW100L38115`) |
 | `catalog/hcl_category_message.json` | PromoCategoryMessageProcessor | streaming | presence Category |
 | `catalog/category_product_association_message.json` | CategoryProductAssociationProcessor | streaming | presence CategoryProductAssociation |
 | `catalog/variant_association_message.json` | FitVariantAssociationProcessor | streaming | presence VariantAssociation |
@@ -41,6 +41,11 @@ Inventory samples share one SKU/location so presence checks are consistent:
 | `catalog/badges_goingfast.csv` | ProductBadgesUpdateProcessor | batch | presence Product.isGoingFast=true |
 | `catalog/badges_popular.csv` | ProductBadgesUpdateProcessor | batch | presence Product.isPopular=true |
 | `catalog/onetime_load.csv` | OneTimeDataLoadProcessor | batch | presence SKU |
+
+`hcl_promo_price_message.json` must use the `PromoPriceDocumentExtractor` shape
+`{skus:[{partNumber,isSale,prices:{TMWCASListPrice,TMWSalePrice,TMWCASPrice}}]}` (SKU >= 10 chars). The
+processor upserts a config `Price` keyed by `_id` = uppercased SKU; verify is presence of `Price`
+`_id=TMW100L38115`.
 
 ## Catalog · Bundles (critical, separate group)
 
